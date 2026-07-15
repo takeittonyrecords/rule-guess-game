@@ -2,17 +2,54 @@
   box-sizing: border-box;
 }
 
+:root {
+  --pastel-bg-1: #f4f1ff;
+  --pastel-bg-2: #eef7ff;
+  --pastel-bg-3: #fff3f7;
+  --ink: #322f4a;
+  --ink-soft: #6b6785;
+  --card-bg: #ffffff;
+  --card-border: #ece8fb;
+  --accent: #7c6fee;
+  --accent-dark: #5f4fe0;
+  --accent-soft: #eae6ff;
+  --shadow-soft: 0 8px 24px rgba(124, 111, 238, 0.12);
+  --shadow-tiny: 0 2px 8px rgba(124, 111, 238, 0.1);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
+html,
 body {
   margin: 0;
-  font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
-  background: #f5f6fa;
-  color: #222;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Zen Kaku Gothic New', -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  background: linear-gradient(160deg, var(--pastel-bg-1) 0%, var(--pastel-bg-2) 55%, var(--pastel-bg-3) 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
 }
 
 .screen {
   max-width: 720px;
-  margin: 0 auto;
-  padding: 24px;
+  margin: 24px auto;
+  padding: 28px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--card-border);
 }
 
 .screen.center {
@@ -20,7 +57,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: calc(100vh - 48px);
   text-align: center;
 }
 
@@ -30,7 +67,7 @@ body {
   gap: 12px;
   margin-top: 12px;
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
 }
 
 label {
@@ -39,35 +76,60 @@ label {
   gap: 4px;
   text-align: left;
   font-size: 14px;
+  color: var(--ink-soft);
 }
 
 input[type='text'],
 input:not([type]) {
-  padding: 8px;
+  padding: 10px 12px;
   font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: var(--pastel-bg-1);
+  color: var(--ink);
+  outline: none;
+}
+
+input[type='text']:focus,
+input:not([type]):focus {
+  border-color: var(--accent);
 }
 
 button {
-  padding: 10px 16px;
+  padding: 11px 20px;
   font-size: 15px;
-  border-radius: 8px;
+  font-weight: 700;
+  border-radius: 999px;
   border: none;
-  background: #4a6cf7;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: white;
   cursor: pointer;
+  box-shadow: var(--shadow-tiny);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  font-family: inherit;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 111, 238, 0.22);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
+  box-shadow: none;
 }
 
 button.link {
   background: none;
-  color: #4a6cf7;
+  color: var(--accent-dark);
   text-decoration: underline;
+  box-shadow: none;
+  padding: 4px 6px;
 }
 
 .rule-list {
@@ -78,28 +140,44 @@ button.link {
 
 .rule-list li {
   padding: 6px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .history-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 12px 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--card-border);
 }
 
 .history-table th,
 .history-table td {
-  border: 1px solid #ddd;
-  padding: 6px 8px;
+  padding: 8px 10px;
   text-align: left;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.history-table th {
+  background: var(--pastel-bg-1);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-table tr:last-child td {
+  border-bottom: none;
 }
 
 .error-text {
-  color: #c0392b;
+  color: #e0518a;
+  font-weight: 500;
 }
 
 .hint {
-  color: #888;
+  color: var(--ink-soft);
   font-size: 14px;
 }
 
@@ -115,7 +193,7 @@ button.link {
 
 .rule-memo {
   margin-top: 24px;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--card-border);
   padding-top: 12px;
 }
 
@@ -132,7 +210,7 @@ button.link {
   justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .rule-memo-label {
@@ -146,8 +224,10 @@ button.link {
   font-size: 18px;
   font-weight: bold;
   background: #fff;
-  border: 1px solid #ccc;
+  border: 1px solid var(--card-border);
   color: inherit;
+  box-shadow: none;
+  border-radius: var(--radius-sm);
 }
 
 .room-code-banner {
@@ -155,9 +235,9 @@ button.link {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #1f2937;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: #fff;
-  padding: 10px 20px;
+  padding: 12px 24px;
   font-size: 14px;
 }
 
@@ -167,18 +247,281 @@ button.link {
 }
 
 .disband-button {
-  background: #c0392b;
-  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6px 14px;
   font-size: 13px;
+  box-shadow: none;
 }
 
 .child-name-banner {
-  background: #2c3e50;
+  background: #4b4470;
   color: #fff;
-  padding: 10px 20px;
+  padding: 12px 24px;
   font-size: 14px;
 }
 
 .child-name-banner strong {
   font-size: 16px;
+}
+
+/* ===== v2: キーパッド ===== */
+
+.keypad {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.keypad-display {
+  min-height: 44px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  background: var(--pastel-bg-1);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-align: right;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.keypad-grid button {
+  background: var(--pastel-bg-2);
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  padding: 14px 0;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-tiny);
+}
+
+.keypad-grid button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 111, 238, 0.18);
+}
+
+.keypad-grid .keypad-op {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: #fff;
+}
+
+.keypad-grid .keypad-clear {
+  background: #ffe1ea;
+  color: #c0396f;
+}
+
+/* ===== v2: ルールカード ===== */
+
+.rule-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.rule-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.rule-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-tiny);
+}
+
+.rule-card-checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.rule-card input[type='checkbox'] {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+
+.rule-card .square-checkbox {
+  border-radius: 4px;
+}
+
+.rule-card .round-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+}
+
+.rule-card .round-checkbox:checked {
+  background: var(--accent);
+}
+
+.rule-card .round-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.rule-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.rule-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rule-card-qnum {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--pastel-bg-1);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.rule-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.rule-card-example {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  letter-spacing: 0.02em;
+}
+
+.rule-card-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+/* ===== v2: 解答用紙(答案)UI ===== */
+
+.answer-sheet {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 38px,
+    rgba(124, 111, 238, 0.08) 39px
+  );
+}
+
+.answer-sheet-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 3px double var(--accent);
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+
+.answer-sheet-title {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.answer-sheet-hint {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* ===== v2: 判定スタンプ(判子) ===== */
+
+.judgement-stamp-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.judgement-stamp {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 6px solid #d0293f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d0293f;
+  font-size: 40px;
+  font-weight: 900;
+  transform: scale(2.4) rotate(-18deg);
+  opacity: 0;
+  box-shadow: inset 0 0 0 3px rgba(208, 41, 63, 0.35);
+}
+
+.judgement-stamp.stamp-play {
+  animation: stampDown 0.45s cubic-bezier(0.2, 0.9, 0.4, 1.2) forwards;
+}
+
+@keyframes stampDown {
+  0% {
+    transform: scale(2.4) rotate(-18deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.92) rotate(-6deg);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1.08) rotate(-8deg);
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+    opacity: 1;
+  }
+}
+
+/* ===== v2: 猫の結果表示 ===== */
+
+.cat-result-image {
+  width: 1.4em;
+  height: 1.4em;
+  object-fit: cover;
+  border-radius: 50%;
+  vertical-align: middle;
+  border: 2px solid var(--accent-soft);
+}
+
+.cat-result-placeholder {
+  font-size: 1.2em;
+  vertical-align: middle;
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { emitAsync } from '../socket.js';
 import RuleMemoList from './RuleMemoList.jsx';
+import ResultDisplay from './ResultDisplay.jsx';
+import Keypad from './Keypad.jsx';
 
 export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMemo }) {
   const [formula, setFormula] = useState('');
@@ -46,7 +48,9 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
             <tr key={idx}>
               <td>{h.childName}</td>
               <td>{h.formulaDisplay}</td>
-              <td>{h.resultDisplay}</td>
+              <td>
+                <ResultDisplay display={h.resultDisplay} />
+              </td>
             </tr>
           ))}
         </tbody>
@@ -54,16 +58,10 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
 
       {!submitted && (
         <div className="stack">
-          <label>
-            計算式（0〜99の整数、2〜3項、+ - × ÷ のみ）
-            <input
-              value={formula}
-              onChange={(e) => setFormula(e.target.value)}
-              placeholder="例: 12+7-3"
-            />
-          </label>
+          <p className="hint">計算式（0〜99の整数、2〜3項）をキーパッドで入力してください</p>
+          <Keypad value={formula} onChange={setFormula} />
           {error && <p className="error-text">{error}</p>}
-          <button disabled={busy} onClick={handleSubmit}>
+          <button disabled={busy || !formula} onClick={handleSubmit}>
             送信する
           </button>
         </div>
@@ -72,7 +70,7 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
       {submitted && (
         <div className="stack">
           <p>
-            結果: <strong>{lastResult}</strong>
+            結果: <strong><ResultDisplay display={lastResult} /></strong>
           </p>
           <p>次にどうしますか？</p>
           <button disabled={busy} onClick={() => handleEndTurn('goToAnswer')}>

@@ -18,7 +18,7 @@ export default function App() {
   const [memberId, setMemberId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [error, setError] = useState('');
-  // クリア以外の回答結果はサーバー側の状態が予測フェイズへ即座に切り替わってしまうため、
+  // 卒業以外の回答結果はサーバー側の状態が予測フェイズへ即座に切り替わってしまうため、
   // このローカル状態で一時的にフィードバック画面を割り込ませる。
   const [pendingAnswerFeedback, setPendingAnswerFeedback] = useState(null);
   // ルールごとに付ける推理メモ（？/〇/×）。サーバーには送らない、この端末だけのローカル状態。
@@ -197,7 +197,7 @@ export default function App() {
           gameState={gameState}
           roomCode={roomCode}
           onResult={(judgement) => {
-            if (judgement !== 'CLEAR') {
+            if (judgement !== 'GRADUATE') {
               setPendingAnswerFeedback(judgement);
             }
           }}

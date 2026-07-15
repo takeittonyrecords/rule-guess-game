@@ -1,3 +1,5 @@
+import JudgementStamp from './JudgementStamp.jsx';
+
 export default function ResultScreen({ gameState, amHost, onResetToLobby }) {
   const { lastResult, rulesPool } = gameState;
   const correctLabels = (lastResult?.correctRuleIds || [])
@@ -6,7 +8,8 @@ export default function ResultScreen({ gameState, amHost, onResetToLobby }) {
 
   return (
     <div className="screen center">
-      <h2>クリア！</h2>
+      <h2>卒業！</h2>
+      <JudgementStamp judgement="GRADUATE" />
       <p>
         <strong>{lastResult?.clearedChildName}</strong> さんが正解しました。
       </p>

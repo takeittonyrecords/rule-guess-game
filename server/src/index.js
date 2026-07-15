@@ -266,7 +266,7 @@ io.on('connection', (socket) => {
     }
     const judgement = judgeAnswer(room.selectedRuleIds, ids);
 
-    if (judgement === 'CLEAR') {
+    if (judgement === 'GRADUATE') {
       room.phase = 'result';
       room.lastResult = {
         judgement,
@@ -280,7 +280,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // クリア以外: ペナルティなしで予測フェイズに戻る。
+    // 卒業以外: ペナルティなしで予測フェイズに戻る。
     // 手番はすでに goToAnswer の時点で次の子に渡してあるので、ここでは進めない。
     room.phase = 'predict';
     room.answeringChildId = null;

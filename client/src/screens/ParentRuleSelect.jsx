@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { emitAsync } from '../socket.js';
+import RuleCard from './RuleCard.jsx';
 
 export default function ParentRuleSelect({ gameState, roomCode }) {
   const [selected, setSelected] = useState([]);
@@ -32,20 +33,16 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
       <p>あなたが今回の親です。他のメンバー: {otherMembers.map((m) => m.name).join('、') || '(まだいません)'}</p>
       <p>プールから2〜3個のルールを選んでください。選んだルールは他のメンバーには見えません。</p>
 
-      <ul className="rule-list">
+      <div className="rule-card-grid">
         {gameState.rulesPool.map((r) => (
-          <li key={r.id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={selected.includes(r.id)}
-                onChange={() => toggle(r.id)}
-              />
-              {r.label}
-            </label>
-          </li>
+          <RuleCard
+            key={r.id}
+            rule={r}
+            checked={selected.includes(r.id)}
+            onToggle={() => toggle(r.id)}
+          />
         ))}
-      </ul>
+      </div>
 
       <p>選択中: {selected.length}個</p>
       {error && <p className="error-text">{error}</p>}

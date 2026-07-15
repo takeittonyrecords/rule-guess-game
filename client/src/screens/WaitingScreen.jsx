@@ -1,4 +1,5 @@
 import RuleMemoList from './RuleMemoList.jsx';
+import ResultDisplay from './ResultDisplay.jsx';
 
 function memberName(gameState, id) {
   return gameState.members.find((m) => m.id === id)?.name || '?';
@@ -32,7 +33,9 @@ export default function WaitingScreen({ gameState, answering, role, ruleMemo, on
             <tr key={idx}>
               <td>{h.childName}</td>
               <td>{h.formulaDisplay}</td>
-              <td>{h.resultDisplay}</td>
+              <td>
+                <ResultDisplay display={h.resultDisplay} />
+              </td>
             </tr>
           ))}
         </tbody>

@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { emitAsync } from '../socket.js';
-
-const JUDGEMENT_LABEL = {
-  CLEAR: 'クリア！',
-  C: 'C判定（ルールの数だけ合っています）',
-  B: 'B判定（正解ルールを1つ以上含んでいます）',
-  INCORRECT: '不正解',
-};
+import RuleCard from './RuleCard.jsx';
 
 export default function ChildAnswer({ gameState, roomCode, onResult }) {
   const [selected, setSelected] = useState([]);
@@ -34,32 +28,30 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
   }
 
   return (
-    <div className="screen">
-      <h2>回答フェイズ</h2>
-      <p>適用されていると思うルールを2つ以上選んでください。</p>
+    <div className="screen answer-sheet">
+      <div className="answer-sheet-header">
+        <span className="answer-sheet-title">解答用紙</span>
+        <span className="answer-sheet-hint">選択式・2つ以上</span>
+      </div>
 
-      <ul className="rule-list">
-        {gameState.rulesPool.map((r) => (
-          <li key={r.id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={selected.includes(r.id)}
-                onChange={() => toggle(r.id)}
-              />
-              {r.label}
-            </label>
-          </li>
+      <div className="rule-card-grid">
+        {gameState.rulesPool.map((r, idx) => (
+          <RuleCard
+            key={r.id}
+            rule={r}
+            checked={selected.includes(r.id)}
+            onToggle={() => toggle(r.id)}
+            questionNumber={idx + 1}
+            roundCheckbox
+          />
         ))}
-      </ul>
+      </div>
 
       <p>選択中: {selected.length}個</p>
       {error && <p className="error-text">{error}</p>}
       <button disabled={busy} onClick={handleSubmit}>
-        この内容で回答する
+        解答する
       </button>
     </div>
   );
 }
-
-export { JUDGEMENT_LABEL };

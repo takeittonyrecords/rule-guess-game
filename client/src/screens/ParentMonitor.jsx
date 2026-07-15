@@ -1,3 +1,5 @@
+import ResultDisplay from './ResultDisplay.jsx';
+
 function childName(gameState, id) {
   return gameState.members.find((m) => m.id === id)?.name || '?';
 }
@@ -35,7 +37,9 @@ export default function ParentMonitor({ gameState }) {
             <tr key={idx}>
               <td>{h.childName}</td>
               <td>{h.formulaDisplay}</td>
-              <td>{h.resultDisplay}</td>
+              <td>
+                <ResultDisplay display={h.resultDisplay} />
+              </td>
             </tr>
           ))}
         </tbody>
