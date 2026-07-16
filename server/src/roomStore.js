@@ -44,6 +44,11 @@ export function createRoom(hostSocketId, hostName) {
     droppedOutIds: [], // v2で追加: このラウンドで「あきらめた」子のメンバーID一覧。
                         // 抜けた子は以後、親と同じ監視画面(内訳つき)が見られる。
     hintsUsed: [], // v2で追加: このラウンドで「ヒント」を使ったメンバーID一覧（1ラウンド1回まで）。
+    // 再接続対応で追加: 切断中メンバーの猶予タイマー管理(server/src/index.js参照)。
+    // { [memberId]: { presenceTimer, turnSkipTimer } }
+    pendingTimers: {},
+    hostDisconnected: false,
+    hostDisconnectTimer: null,
   };
   rooms.set(code, room);
   return room;

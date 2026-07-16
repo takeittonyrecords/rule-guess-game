@@ -25,7 +25,6 @@ import {
   addCPU,
   removeCPU,
   setCPUDifficulty,
-  removeSocketFromRoom,
   findMemberBySocket,
   findMemberById,
   findRoomBySocket,
@@ -35,6 +34,17 @@ import {
 } from './roomStore.js';
 
 const PORT = process.env.PORT || 3001;
+
+// 再接続の猶予期間（仕様: セッション永続化・再接続対応）
+// ・ホストが切断: 2分間は部屋を解散せず待つ
+// ・子(手番でも回答中でもない/親): 2分間は席を保持する
+// ・子(予測フェイズの手番中): 30秒だけ手番を止め、それでも戻らなければ次の子へスキップ
+//   （ただし本人の参加枠自体は上の2分間、引き続き保持される）
+// ・子(回答フェイズ中=まさに卒業判定に挑戦中): 猶予なし、即座に回答権を放棄する
+//   （ここで止めると部屋全体が進行不能になるため）
+const HOST_GRACE_MS = 2 * 60 * 1000;
+const PRESENCE_GRACE_MS = 2 * 60 * 1000;
+const TURN_SKIP_MS = 30 * 1000;
 
 const app = express();
 app.use(cors());
@@ -90,6 +100,9 @@ function buildStateFor(room, viewerMemberId) {
       id: m.id,
       name: m.name,
       isCPU: !!m.isCPU,
+      // 再接続対応: ソケットが外れている(=切断猶予期間中の)メンバーかどうか。
+      // CPUはそもそもソケットを持たない仮想メンバーなので対象外。
+      disconnected: !m.isCPU && !m.socketId,
       ...(m.isCPU ? { difficulty: m.difficulty || 'intermediate' } : {}),
     })),
     currentParentId: room.currentParentId,
@@ -103,6 +116,8 @@ function buildStateFor(room, viewerMemberId) {
     lastResult: room.lastResult,
     droppedOutIds: room.droppedOutIds || [],
     hintUsed: (room.hintsUsed || []).includes(viewerMemberId),
+    // 再接続対応: ホストが切断猶予期間中かどうか（全員に見せてよい情報）
+    hostDisconnected: !!room.hostDisconnected,
   };
   if (isPrivilegedViewer(room, viewerMemberId)) {
     base.selectedRuleIds = room.selectedRuleIds;
@@ -178,6 +193,98 @@ function removeChildFromTurnOrder(room, memberId) {
   const newIdx = room.turnOrder.indexOf(currentId);
   room.currentTurnIndex = newIdx !== -1 ? newIdx : 0;
   return true;
+}
+
+// 再接続対応: メンバーごとの猶予タイマー(presence/turnSkip)を解除する。
+// 再接続(room:rejoin)できた時、または本人がすでに別の理由でメンバーから
+// 削除された時に呼ぶ。
+function clearMemberTimers(room, memberId) {
+  room.pendingTimers = room.pendingTimers || {};
+  const t = room.pendingTimers[memberId];
+  if (!t) return;
+  if (t.presenceTimer) clearTimeout(t.presenceTimer);
+  if (t.turnSkipTimer) clearTimeout(t.turnSkipTimer);
+  delete room.pendingTimers[memberId];
+}
+
+function clearHostTimer(room) {
+  if (room.hostDisconnectTimer) {
+    clearTimeout(room.hostDisconnectTimer);
+    room.hostDisconnectTimer = null;
+  }
+}
+
+// 部屋を削除する前に、その部屋に紐づく猶予タイマーを全て解除しておく
+// （解除しないと、削除後の部屋オブジェクトに対して無意味なコールバックが後から実行されてしまう）。
+function clearAllRoomTimers(room) {
+  clearHostTimer(room);
+  const timers = room.pendingTimers || {};
+  for (const memberId of Object.keys(timers)) {
+    clearMemberTimers(room, memberId);
+  }
+}
+
+// 予測フェイズの「今の手番」が切断中のメンバーだった場合、30秒後に
+// 自動でスキップするタイマーをセットする（すでにセット済みなら何もしない）。
+// ターンが進むたびに呼び出すことで、次の手番も切断中だった場合に
+// 連鎖的にスキップ猶予をセットし直せるようにしている。
+function scheduleTurnSkipIfDisconnected(room) {
+  if (room.phase !== 'predict') return;
+  const curId = currentChildId(room);
+  if (!curId) return;
+  const curMember = findMemberById(room, curId);
+  if (!curMember || curMember.socketId) return; // 接続中なら何もしない
+  room.pendingTimers = room.pendingTimers || {};
+  const existing = room.pendingTimers[curId] || {};
+  if (existing.turnSkipTimer) return; // 既にスキップ猶予がセット済み
+  existing.turnSkipTimer = setTimeout(() => handleTurnSkipTimeout(room, curId), TURN_SKIP_MS);
+  room.pendingTimers[curId] = existing;
+}
+
+// 30秒の手番スキップ猶予が切れたときの処理。まだ切断中で、かつ実際にまだ
+// 本人の手番のままであれば次の子へ進める。すでに再接続済み、または既に
+// 別の理由で手番が進んでいれば何もしない。
+function handleTurnSkipTimeout(room, memberId) {
+  if (room.pendingTimers?.[memberId]) {
+    room.pendingTimers[memberId].turnSkipTimer = null;
+  }
+  const member = findMemberById(room, memberId);
+  if (!member || member.socketId) return;
+  if (room.phase === 'predict' && currentChildId(room) === memberId) {
+    advanceTurn(room);
+    scheduleTurnSkipIfDisconnected(room);
+    broadcastState(room);
+  }
+}
+
+// 2分間の在席猶予が切れたときの処理。まだ再接続していなければ、本当に
+// 退席したものとして扱う。親役だった場合はラウンド自体を中断してロビーへ、
+// それ以外の子だった場合は手番表から外す（全員いなくなれば廃校画面へ）。
+// まだロビー（ラウンド開始前）で親指名だけが外れる場合は指名を取り消すのみ。
+function handlePresenceTimeout(room, memberId) {
+  const member = findMemberById(room, memberId);
+  if (!member || member.socketId) return; // 既に再接続済み
+  clearMemberTimers(room, memberId);
+
+  const wasParent = room.currentParentId === memberId;
+  const wasInRound = room.phase !== 'lobby';
+
+  room.members = room.members.filter((m) => m.id !== memberId);
+  room.droppedOutIds = (room.droppedOutIds || []).filter((id) => id !== memberId);
+
+  if (wasParent && wasInRound) {
+    resetToLobby(room);
+  } else if (wasParent) {
+    room.currentParentId = null;
+  } else if (wasInRound) {
+    const hasRemainingChildren = removeChildFromTurnOrder(room, memberId);
+    if (!hasRemainingChildren) {
+      closeRound(room);
+    } else {
+      scheduleTurnSkipIfDisconnected(room);
+    }
+  }
+  broadcastState(room);
 }
 
 io.on('connection', (socket) => {
@@ -418,6 +525,10 @@ io.on('connection', (socket) => {
       advanceTurn(room);
     } else {
       advanceTurn(room);
+      // 次の手番が切断中のメンバーだった場合、30秒スキップ猶予をセットする
+      // （goToAnswer側は今phaseがanswerなので、submitAnswerで再びpredictに
+      // 戻るタイミングでこのチェックを行う）。
+      scheduleTurnSkipIfDisconnected(room);
     }
     ack?.({ ok: true });
     broadcastState(room);
@@ -460,6 +571,8 @@ io.on('connection', (socket) => {
     // 手番はすでに goToAnswer の時点で次の子に渡してあるので、ここでは進めない。
     room.phase = 'predict';
     room.answeringChildId = null;
+    // 次の手番が切断中のメンバーだった場合に備えて、ここでスキップ猶予をセットする。
+    scheduleTurnSkipIfDisconnected(room);
     ack?.({ ok: true, judgement });
     broadcastState(room);
   });
@@ -487,6 +600,8 @@ io.on('connection', (socket) => {
     const hasRemainingChildren = removeChildFromTurnOrder(room, member.id);
     if (!hasRemainingChildren) {
       closeRound(room);
+    } else {
+      scheduleTurnSkipIfDisconnected(room);
     }
     ack?.({ ok: true });
     broadcastState(room);
@@ -528,6 +643,37 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
+  // 再接続対応: ブラウザ側にlocalStorageで保存しておいた{roomCode, memberId}を使って、
+  // 新しいソケット接続を既存のメンバーに紐付け直す。ページ再読み込みや、通信が一時的に
+  // 切れて自動再接続した場合の両方から呼ばれる想定。猶予期間(ホスト2分/子2分)内であれば、
+  // 保留中の退席タイマーもここで解除する。同じmemberIdへ複数端末から同時に呼ばれた場合は
+  // 単純に一番新しい接続で上書きする(気軽に遊ぶ用途のため、特別な競合対応はしない)。
+  socket.on('room:rejoin', ({ roomCode, memberId } = {}, ack) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      ack?.({ ok: false, error: '部屋が見つかりません（サーバーが再起動した可能性があります）' });
+      return;
+    }
+    const member = findMemberById(room, memberId);
+    if (!member) {
+      ack?.({ ok: false, error: 'このセッションはもう有効ではありません' });
+      return;
+    }
+    member.socketId = socket.id;
+    socket.join(room.code);
+
+    if (isHost(room, member.id)) {
+      room.hostDisconnected = false;
+      clearHostTimer(room);
+    }
+    clearMemberTimers(room, member.id);
+    // 他に切断中のまま現在の手番になっているメンバーがいないか念のため確認する
+    scheduleTurnSkipIfDisconnected(room);
+
+    ack?.({ ok: true, roomCode: room.code, memberId: member.id });
+    broadcastState(room);
+  });
+
   // ホスト: ロビーに戻って次のラウンドの親指名からやり直す
   socket.on('host:resetToLobby', ({ roomCode } = {}, ack) => {
     const room = getRoom(roomCode);
@@ -557,37 +703,61 @@ io.on('connection', (socket) => {
       ack?.({ ok: false, error: '権限がありません' });
       return;
     }
+    clearAllRoomTimers(room);
     io.to(room.code).emit('room:disbanded');
     deleteRoom(room.code);
     ack?.({ ok: true });
   });
 
+  // 再接続対応: 切断されても即座にメンバーを削除せず、猶予期間だけ席を保持する。
+  // 猶予期間内に room:rejoin が呼ばれれば復帰、呼ばれなければ本当に退席したものとして扱う。
   socket.on('disconnect', () => {
     const room = findRoomBySocket(socket.id);
     if (!room) return;
     const member = findMemberBySocket(room, socket.id);
     if (!member) return;
 
+    member.socketId = null;
+
     if (isHost(room, member.id)) {
-      // ホストが抜けたら部屋ごと解散する
-      io.to(room.code).emit('room:disbanded');
-      deleteRoom(room.code);
+      // ホストが切断: 即解散せず2分間だけ待つ。その間は他のメンバーの操作は
+      // 通常通り進行できる（ホストはロビー専用の操作権限を持つだけのため）。
+      room.hostDisconnected = true;
+      clearHostTimer(room);
+      room.hostDisconnectTimer = setTimeout(() => {
+        if (room.hostDisconnected) {
+          clearAllRoomTimers(room);
+          io.to(room.code).emit('room:disbanded');
+          deleteRoom(room.code);
+        }
+      }, HOST_GRACE_MS);
+      broadcastState(room);
       return;
     }
 
-    const wasParent = room.currentParentId === member.id;
-    removeSocketFromRoom(room, socket.id);
+    const wasAnswering = room.phase === 'answer' && room.answeringChildId === member.id;
+    const wasCurrentTurn = room.phase === 'predict' && currentChildId(room) === member.id;
 
-    if (wasParent && room.phase !== 'lobby') {
-      // ゲーム進行中に親が抜けた場合は、そのラウンドを中断してロビーに戻す
-      resetToLobby(room);
-    } else if (room.phase !== 'lobby') {
-      // 進行中の子が抜けた場合は手番表から外す
-      const hasRemainingChildren = removeChildFromTurnOrder(room, member.id);
-      if (!hasRemainingChildren) {
-        resetToLobby(room);
-      }
+    if (wasAnswering) {
+      // 回答フェイズ中(まさに卒業判定に挑戦中)の本人が切断: 猶予を置かず即座に
+      // 回答権を放棄して予測フェイズへ戻す。ここで止まると部屋全体が進行不能になるため。
+      room.phase = 'predict';
+      room.answeringChildId = null;
     }
+
+    clearMemberTimers(room, member.id);
+    room.pendingTimers = room.pendingTimers || {};
+    const timers = {};
+
+    if (wasCurrentTurn) {
+      // 予測フェイズの手番中に切断: 30秒だけ止めて、それでも戻らなければ次の子へスキップ
+      timers.turnSkipTimer = setTimeout(() => handleTurnSkipTimeout(room, member.id), TURN_SKIP_MS);
+    }
+
+    // 本人の参加枠自体は2分間保持する（この間にroom:rejoinすれば手番の順番も維持したまま復帰できる）
+    timers.presenceTimer = setTimeout(() => handlePresenceTimeout(room, member.id), PRESENCE_GRACE_MS);
+    room.pendingTimers[member.id] = timers;
+
     broadcastState(room);
   });
 });

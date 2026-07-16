@@ -32,6 +32,9 @@ export default function LobbyScreen({
             {m.id === gameState.hostId && '（ホスト）'}
             {m.id === gameState.currentParentId && '（このラウンドの親）'}
             {m.isCPU && '（CPU）'}
+            {m.disconnected && (
+              <span className="hint"> （切断中・再接続を待っています）</span>
+            )}
           </li>
         ))}
       </ul>

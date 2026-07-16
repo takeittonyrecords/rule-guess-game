@@ -831,3 +831,17 @@ button.link {
     opacity: 1;
   }
 }
+
+/* ===== 再接続対応: 一時的な接続状態バナー ===== */
+
+.reconnecting-banner {
+  background: #7a5c00;
+  color: #fff;
+  padding: 10px 24px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.reconnecting-banner i.ti {
+  margin-right: 6px;
+}
