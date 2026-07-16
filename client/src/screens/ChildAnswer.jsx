@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { emitAsync } from '../socket.js';
+import { stageMeta } from '../ruleTheme.js';
 
 export default function ChildAnswer({ gameState, roomCode, onResult }) {
   const [selected, setSelected] = useState([]);
@@ -36,6 +37,7 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
       <ul className="answer-rule-list">
         {gameState.rulesPool.map((r) => {
           const checked = selected.includes(r.id);
+          const meta = stageMeta(r.stage);
           return (
             <li key={r.id} className="answer-rule-item">
               <label className="answer-rule-row">
@@ -45,6 +47,12 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
                   onChange={() => toggle(r.id)}
                   className="square-checkbox"
                 />
+                <span
+                  className="answer-rule-badge"
+                  style={{ background: meta.bg, color: meta.color }}
+                >
+                  <i className={`ti ${meta.icon}`} aria-hidden="true" />
+                </span>
                 <span className="answer-rule-label">{r.label}</span>
               </label>
             </li>

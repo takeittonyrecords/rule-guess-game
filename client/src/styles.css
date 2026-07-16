@@ -450,6 +450,18 @@ button.link {
   text-align: left;
 }
 
+.answer-rule-badge {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 .answer-rule-label {
   flex: 1;
   font-size: 15px;
