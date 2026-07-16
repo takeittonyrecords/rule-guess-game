@@ -7,7 +7,7 @@ export const STAGE_META = {
   A: { label: '数値', color: '#4a6cf7', bg: '#eaf0ff', icon: 'ti-hash' },
   B: { label: '記号', color: '#d97706', bg: '#fff3e0', icon: 'ti-divide' },
   C: { label: '結果', color: '#16a34a', bg: '#e8f8ee', icon: 'ti-refresh' },
-  D: { label: '演出', color: '#8b5cf6', bg: '#f3ecff', icon: 'ti-wand' },
+  D: { label: '魔法', color: '#8b5cf6', bg: '#f3ecff', icon: 'ti-wand' },
 };
 
 export function stageMeta(stage) {
@@ -24,11 +24,11 @@ export const JUDGEMENT_LABEL = {
 };
 
 export const JUDGEMENT_DESCRIPTION = {
-  GRADUATE: '正解ルールと完全に一致しました',
-  EXCELLENT: '個数は合っていて、正解ルールを部分的に含んでいます',
-  GOOD: '個数は違いますが、正解ルールを含んでいます',
-  PASS: '個数は合っていますが、正解ルールは含まれていません',
-  FAIL: '正解ルールを1つも含んでいません',
+  GRADUATE: 'おめでとう。だが、これから大きな試験がまだ待っているぞ。人生という、な……。',
+  EXCELLENT: 'ルールの数はあっているけど、間違ったルールが含まれているぞ。惜しい！',
+  GOOD: '正しいルールを含むが、ルールの数が間違っているぞ。まだまだだ！',
+  PASS: 'ルールの数はあっているが、正しいルールが一つもない。やり直し！',
+  FAIL: '何もわかっとらん。人生を見つめなおせ。',
 };
 
 // 計算結果の表示用の特殊マーカー。ruleEngine.js の displayType==='cat' のとき

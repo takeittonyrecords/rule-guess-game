@@ -6,18 +6,27 @@ import { CAT_MARKER } from '../ruleTheme.js';
 // 猫の画像ファイル(cat.jpg)が用意されるまでは、絵文字のプレースホルダーで代用する。
 // 画像はclient/public/game-assets/cat.jpgに配置する（Viteのpublicフォルダはビルド時に
 // そのままルート直下にコピーされるため、src配下からの相対パス参照よりも確実に届く）。
-export default function ResultDisplay({ display }) {
+//
+// size="large" を指定すると、猫が出たときだけ画像を大きくポップイン表示する演出になる。
+// 自分の手番で結果が確定した直後（ChildPredictの「結果:」欄）など、注目してほしい箇所で使う。
+// 履歴テーブルの各行など、幅が限られる場所ではデフォルト（通常サイズ）のままにする。
+export default function ResultDisplay({ display, size = 'normal' }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const isLarge = size === 'large';
 
   if (display === CAT_MARKER) {
     if (imageFailed) {
-      return <span className="cat-result-placeholder">🐱</span>;
+      return (
+        <span className={isLarge ? 'cat-result-placeholder cat-result-placeholder--large' : 'cat-result-placeholder'}>
+          🐱
+        </span>
+      );
     }
     return (
       <img
         src="/game-assets/cat.jpg"
         alt="猫"
-        className="cat-result-image"
+        className={isLarge ? 'cat-result-image cat-result-image--large' : 'cat-result-image'}
         onError={() => setImageFailed(true)}
       />
     );

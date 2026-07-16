@@ -72,7 +72,7 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
       {submitted && (
         <div className="stack">
           <p>
-            結果: <strong><ResultDisplay display={lastResult} /></strong>
+            結果: <strong><ResultDisplay display={lastResult} size="large" /></strong>
           </p>
           <p>卒業試験に挑戦する？</p>
           <button disabled={busy} onClick={() => handleEndTurn('goToAnswer')}>
