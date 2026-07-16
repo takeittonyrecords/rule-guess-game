@@ -2,33 +2,36 @@ import { useState } from 'react';
 import { CAT_MARKER } from '../ruleTheme.js';
 
 // 計算結果の表示。通常は文字列（数字やナベアツ風の読み）をそのまま表示するが、
-// サーバーからCAT_MARKERが送られてきたときは、猫の画像を表示する。
-// 猫の画像ファイル(cat.jpg)が用意されるまでは、絵文字のプレースホルダーで代用する。
-// 画像はclient/public/game-assets/cat.jpgに配置する（Viteのpublicフォルダはビルド時に
-// そのままルート直下にコピーされるため、src配下からの相対パス参照よりも確実に届く）。
+// サーバーからCAT_MARKERが送られてきたときは猫の演出を行う。
 //
-// size="large" を指定すると、猫が出たときだけ画像を大きくポップイン表示する演出になる。
-// 自分の手番で結果が確定した直後（ChildPredictの「結果:」欄）など、注目してほしい箇所で使う。
-// 履歴テーブルの各行など、幅が限られる場所ではデフォルト（通常サイズ）のままにする。
+// - 履歴テーブルなど幅が限られる場所（size="normal"、デフォルト）では、
+//   画像は使わずテキストで「にゃ～ん」とだけ表示する。
+// - 自分の手番で結果が確定した直後（size="large"）では、猫の画像を
+//   大きくポップイン表示し、その下に「にゃ～ん」というキャプションを添える。
+//   画像ファイル(client/public/game-assets/cat.jpg)が読み込めない場合は
+//   絵文字のプレースホルダーで代用する。
 export default function ResultDisplay({ display, size = 'normal' }) {
   const [imageFailed, setImageFailed] = useState(false);
   const isLarge = size === 'large';
 
   if (display === CAT_MARKER) {
-    if (imageFailed) {
-      return (
-        <span className={isLarge ? 'cat-result-placeholder cat-result-placeholder--large' : 'cat-result-placeholder'}>
-          🐱
-        </span>
-      );
+    if (!isLarge) {
+      return <span className="cat-result-text">にゃ～ん</span>;
     }
     return (
-      <img
-        src="/game-assets/cat.jpg"
-        alt="猫"
-        className={isLarge ? 'cat-result-image cat-result-image--large' : 'cat-result-image'}
-        onError={() => setImageFailed(true)}
-      />
+      <span className="cat-result-large-wrap">
+        {imageFailed ? (
+          <span className="cat-result-placeholder cat-result-placeholder--large">🐱</span>
+        ) : (
+          <img
+            src="/game-assets/cat.jpg"
+            alt="猫"
+            className="cat-result-image cat-result-image--large"
+            onError={() => setImageFailed(true)}
+          />
+        )}
+        <span className="cat-result-caption">にゃ～ん</span>
+      </span>
     );
   }
   return <span>{display}</span>;
