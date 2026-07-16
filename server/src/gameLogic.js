@@ -30,11 +30,54 @@ export function judgeAnswer(correctIds, chosenIds) {
   return intersectionSize > 0 ? 'GOOD' : 'FAIL'; // 良 or 不可
 }
 
+// v2で追加: CPUがランダムにルールを選ぶ際、同時に選ばれると効果が打ち消し合ったり
+// 片方が常にもう片方の発動を阻害してしまう組み合わせを避けるための排他ペア。
+// 人間の親が手動でルールを選ぶ場合(ParentRuleSelect)には適用しない。あくまでCPUの
+// 自動選択(pickRandomRuleIds)だけを対象とする。
+// - 13(2倍)と22(半分)は真逆の効果なので同時に選ばない
+// - 12(ぞろ目)は結果の桁を強制的に先頭の数字で揃えてしまうため、16(42の名言)・
+//   17(59を含む)の発動を実質的に阻害してしまう。よって12と16、12と17はそれぞれ
+//   同時に選ばない（ただし16と17自体は同時に選んでもよい）
+// - 2(偶数は負)と3(奇数は2倍)は同時に選ばない
+// - 4(最小を2倍)と5(最大を半分)は同時に選ばない
+const EXCLUSIVE_PAIRS = [
+  [13, 22],
+  [12, 16],
+  [12, 17],
+  [2, 3],
+  [4, 5],
+];
+
+function buildConflictMap(pairs) {
+  const map = new Map();
+  for (const [a, b] of pairs) {
+    if (!map.has(a)) map.set(a, new Set());
+    if (!map.has(b)) map.set(b, new Set());
+    map.get(a).add(b);
+    map.get(b).add(a);
+  }
+  return map;
+}
+
+const CONFLICT_MAP = buildConflictMap(EXCLUSIVE_PAIRS);
+
 // CPU（親役）が使う: 候補ルールIDの中からminCount〜maxCount個をランダムに選ぶ。
 // 難易度ごとの個数レンジはCPU_DIFFICULTIESを参照。
+// EXCLUSIVE_PAIRSに定義された組み合わせは同時に選ばれないよう、シャッフル順に
+// 見ていきながら既に選んだルールと排他関係にあるものはスキップする(貪欲法)。
 export function pickRandomRuleIds(allRuleIds, minCount = 1, maxCount = 5) {
   const count = minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
-  return shuffleArray(allRuleIds).slice(0, count);
+  const shuffled = shuffleArray(allRuleIds);
+  const selected = [];
+  for (const id of shuffled) {
+    if (selected.length >= count) break;
+    const conflicts = CONFLICT_MAP.get(id);
+    if (conflicts && selected.some((s) => conflicts.has(s))) {
+      continue; // 既に選ばれたルールと排他関係にあるためスキップ
+    }
+    selected.push(id);
+  }
+  return selected;
 }
 
 // v2で追加: CPU（一人プレイの仮想の親）の難易度設定。
