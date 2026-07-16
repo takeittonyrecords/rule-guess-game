@@ -24,7 +24,7 @@
 //    ナベアツ(14) > 3歳児(20, 100超え) の順。
 //    （例：222はナベアツの条件も満たすがネコが優先。593はナベアツの条件も満たすが
 //    クリリンが優先。42はナベアツの条件も満たすが名言が優先。111はナベアツの
-//    条件も満たすが班長が優先。111・1111は3歳児の条件(100超え)も満たすが班長が優先。）
+//    条件も満たすが班長が優先。111・1111は3歳児の条件(100以上)も満たすが班長が優先。）
 // 8. ナベアツ風の読み上げでは、マイナス符号は読みに含めない（簡略化）。
 //    小数が出た場合は「テン」のあとに小数部分の桁を1つずつ読む
 //    （例：3.33 → サンテンサンサン）。整数部分は4桁ごとに区切り、万・億・兆・京の
@@ -367,30 +367,36 @@ function pickRandomLine(lines) {
   return lines[Math.floor(Math.random() * lines.length)];
 }
 
-function applyStageD(finalValue, ruleIds) {
+function applyStageD(finalValue, ruleIds, trace) {
   const has = (id) => ruleIds.includes(id);
 
   if (has(17) && (finalValue === 59 || finalValue === 593)) {
+    if (trace) trace.push(`段階D: ${getRuleById(17).label}が発動`);
     return { display: 'クリリンのことかーっ！！！', displayType: 'kuririn' };
   }
 
   if (has(15) && isAllTwos(finalValue)) {
+    if (trace) trace.push(`段階D: ${getRuleById(15).label}が発動`);
     return { display: '__CAT__', displayType: 'cat' };
   }
 
   if (has(23) && isAllOnes(finalValue)) {
+    if (trace) trace.push(`段階D: ${getRuleById(23).label}が発動`);
     return { display: `「${pickRandomLine(HANCHOU_LINES)}」`, displayType: 'hanchou' };
   }
 
   if (has(16) && finalValue === 42) {
+    if (trace) trace.push(`段階D: ${getRuleById(16).label}が発動`);
     return { display: '__ANSWER42__', displayType: 'quote42' };
   }
 
   if (has(14)) {
     const numStr = formatNumber(finalValue);
-    const isMultipleOf3 = Number.isInteger(finalValue) && finalValue % 3 === 0;
+    // 0は数学的には3の倍数だが、ナベアツのネタとしては対象外にする（0でアホになるのは不自然なため）。
+    const isMultipleOf3 = Number.isInteger(finalValue) && finalValue !== 0 && finalValue % 3 === 0;
     const containsThree = numStr.includes('3');
     if (isMultipleOf3 || containsThree) {
+      if (trace) trace.push(`段階D: ${getRuleById(14).label}が発動`);
       const reading = numberToKatakanaReading(finalValue);
       const elongated = elongate(reading);
       const half = toHalfWidthKatakana(elongated);
@@ -398,7 +404,8 @@ function applyStageD(finalValue, ruleIds) {
     }
   }
 
-  if (has(20) && Number.isFinite(finalValue) && Math.abs(finalValue) > 100) {
+  if (has(20) && Number.isFinite(finalValue) && Math.abs(finalValue) >= 100) {
+    if (trace) trace.push(`段階D: ${getRuleById(20).label}が発動`);
     return { display: `「${pickRandomLine(TODDLER_LINES)}」`, displayType: 'toddler' };
   }
 
@@ -448,7 +455,7 @@ export function evaluateFormula(formula, ruleIds) {
   }
 
   const finalValue = applyStageC(result, ruleIds, trace);
-  const { display, displayType } = applyStageD(finalValue, ruleIds);
+  const { display, displayType } = applyStageD(finalValue, ruleIds, trace);
 
   return {
     ok: true,

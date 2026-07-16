@@ -83,6 +83,7 @@ checkValue('rule21-triple', '3+5', [21], 24); // 8 -> 24
 checkValue('rule22-half', '3+6', [22], 4); // 9 -> 4（切り捨て）
 
 // 段階D
+checkDisplay('rule14-zero-not-aho', '5-5', [14], '0'); // 0は数学的には3の倍数だがネタ対象外なのでアホにならない
 checkDisplay('rule14-six', '6+0', [14], 'ﾛｸｰ!');
 checkDisplay('rule14-three', '3+0', [14], 'ｻｰﾝ!');
 checkDisplay('rule14-thirteen', '13+0', [14], 'ｼﾞｭｳｻｰﾝ!');
@@ -126,7 +127,9 @@ const TODDLER_CANDIDATES = [
   '「こんなけいさんとかしたくないんです、３さいですから」',
 ];
 checkDisplayIn('rule20-toddler', '90+15', [20], TODDLER_CANDIDATES); // 105
-checkDisplay('rule20x14-nabeatsu-wins', '99+3', [14, 20], 'ﾋｬｸﾆｰ!'); // 102は3の倍数でもあり100超えでもあるが、アホが優先
+checkDisplayIn('rule20-toddler-exactly100', '70+30', [20], TODDLER_CANDIDATES); // ちょうど100（100以上なので発動）
+checkDisplay('rule20-under100-no-effect', '3+1', [20], '4'); // 4は100未満なのでルールの影響なし
+checkDisplay('rule20x14-nabeatsu-wins', '99+3', [14, 20], 'ﾋｬｸﾆｰ!'); // 102は3の倍数でもあり100以上でもあるが、アホが優先
 
 // 0除算（ルール適用によって発生するケース）
 checkDisplay('div-by-zero-via-rule9', '5+0', [9], '計算不能（÷0）'); // 5÷0

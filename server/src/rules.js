@@ -195,7 +195,7 @@ export const RULES = [
     id: 20,
     stage: 'D',
     priority: 6,
-    label: '計算結果が100を超えると3歳児になる',
+    label: '計算結果が100以上で3歳児になる',
     example: { before: '150', after: '3歳児になる' },
     flavor: '何もかも嫌になったので３歳になりました。難しいことは一つもわかりません。',
   },

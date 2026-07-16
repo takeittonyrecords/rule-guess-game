@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { emitAsync } from '../socket.js';
-import RuleCard from './RuleCard.jsx';
+import { stageMeta } from '../ruleTheme.js';
 
 export default function ChildAnswer({ gameState, roomCode, onResult }) {
   const [selected, setSelected] = useState([]);
@@ -28,24 +28,37 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
   }
 
   return (
-    <div className="screen answer-sheet">
+    <div className="screen">
       <div className="answer-sheet-header">
         <span className="answer-sheet-title">解答用紙</span>
         <span className="answer-sheet-hint">選択式・1つ以上</span>
       </div>
 
-      <div className="rule-card-grid">
-        {gameState.rulesPool.map((r, idx) => (
-          <RuleCard
-            key={r.id}
-            rule={r}
-            checked={selected.includes(r.id)}
-            onToggle={() => toggle(r.id)}
-            questionNumber={idx + 1}
-            roundCheckbox
-          />
-        ))}
-      </div>
+      <ul className="answer-rule-list">
+        {gameState.rulesPool.map((r) => {
+          const meta = stageMeta(r.stage);
+          const checked = selected.includes(r.id);
+          return (
+            <li key={r.id} className="answer-rule-item">
+              <label className="answer-rule-row">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(r.id)}
+                  className="square-checkbox"
+                />
+                <span
+                  className="answer-rule-badge"
+                  style={{ background: meta.bg, color: meta.color }}
+                >
+                  <i className={`ti ${meta.icon}`} aria-hidden="true" />
+                </span>
+                <span className="answer-rule-label">{r.label}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
 
       <p>選択中: {selected.length}個</p>
       {error && <p className="error-text">{error}</p>}
