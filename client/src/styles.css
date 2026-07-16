@@ -290,6 +290,7 @@ button.link {
 
 .cpu-difficulty-option {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   cursor: pointer;
@@ -441,26 +442,17 @@ button.link {
 
 .answer-rule-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
   padding: 8px 0;
   cursor: pointer;
-}
-
-.answer-rule-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-size: 13px;
-  flex-shrink: 0;
+  text-align: left;
 }
 
 .answer-rule-label {
   flex: 1;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .room-code-banner {
@@ -568,6 +560,7 @@ button.link {
 
 .rule-card {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 10px;
   padding: 14px;
