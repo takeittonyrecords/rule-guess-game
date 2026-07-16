@@ -29,7 +29,10 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
 
   return (
     <div className="screen">
-      <h2>試験問題作成中（部屋コード: {gameState.code}）</h2>
+      <h2>
+        <i className="ti ti-clipboard-list heading-icon" aria-hidden="true" />
+        試験問題作成中（部屋コード: {gameState.code}）
+      </h2>
       <p>あなたが今回の親です。他のメンバー: {otherMembers.map((m) => m.name).join('、') || '(まだいません)'}</p>
       <p>このリストから2〜3個のルールを選んでください。選んだルールは他のメンバーには見えません。</p>
 
@@ -47,6 +50,7 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
       <p>選択中: {selected.length}個</p>
       {error && <p className="error-text">{error}</p>}
       <button disabled={submitting || otherMembers.length === 0} onClick={handleStart}>
+        <i className="ti ti-wand" aria-hidden="true" />
         このルールでゲームを開始する
       </button>
       {otherMembers.length === 0 && <p className="hint">他のメンバーの参加を待っています</p>}

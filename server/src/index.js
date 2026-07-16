@@ -6,15 +6,16 @@ import express from 'express';
 import cors from 'cors';
 import { Server } from 'socket.io';
 
-import { ruleListForClient } from './rules.js';
+import { ruleListForClient, RULES } from './rules.js';
 import { parseFormula, FormulaError } from './parser.js';
 import { evaluateFormula } from './ruleEngine.js';
-import { judgeAnswer, shuffleArray, currentChildId, advanceTurn } from './gameLogic.js';
+import { judgeAnswer, shuffleArray, currentChildId, advanceTurn, pickRandomRuleIds } from './gameLogic.js';
 import {
   createRoom,
   getRoom,
   deleteRoom,
   addMember,
+  addCPU,
   removeSocketFromRoom,
   findMemberBySocket,
   findMemberById,
@@ -65,7 +66,7 @@ function buildStateFor(room, viewerMemberId) {
     code: room.code,
     hostId: room.hostId,
     phase: room.phase,
-    members: room.members.map((m) => ({ id: m.id, name: m.name })),
+    members: room.members.map((m) => ({ id: m.id, name: m.name, isCPU: !!m.isCPU })),
     currentParentId: room.currentParentId,
     rulesPool: ruleListForClient(),
     turnOrder: room.turnOrder,
@@ -97,6 +98,21 @@ function resetToLobby(room) {
   room.currentTurnIndex = 0;
   room.turnToken = 0;
   room.history = [];
+  room.answeringChildId = null;
+  room.lastResult = null;
+}
+
+// 親が選んだ(またはCPUが自動選択した)ルールでラウンドを開始する。
+// parent:selectRules（人間の親）とhost:assignParent（CPUが親の場合の自動開始）の
+// 両方から呼ばれる共通処理。
+function startRound(room, ruleIds) {
+  const otherMembers = room.members.filter((m) => m.id !== room.currentParentId);
+  room.selectedRuleIds = ruleIds;
+  room.turnOrder = shuffleArray(otherMembers.map((m) => m.id));
+  room.currentTurnIndex = 0;
+  room.turnToken = 0;
+  room.history = [];
+  room.phase = 'predict';
   room.answeringChildId = null;
   room.lastResult = null;
 }
@@ -152,6 +168,41 @@ io.on('connection', (socket) => {
       return;
     }
     room.currentParentId = target.id;
+    if (target.isCPU) {
+      // CPUが親の場合は自分で選択画面を開けないので、ここでランダムに
+      // 2〜3個のルールを自動選択して即座にラウンドを開始する。
+      const otherMembers = room.members.filter((m) => m.id !== target.id);
+      if (otherMembers.length > 0) {
+        const ruleIds = pickRandomRuleIds(RULES.map((r) => r.id));
+        startRound(room, ruleIds);
+      }
+    }
+    ack?.({ ok: true });
+    broadcastState(room);
+  });
+
+  // ホスト: 部屋にCPU（一人プレイ用の仮想の親役）を1体追加する
+  socket.on('host:addCPU', ({ roomCode } = {}, ack) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      ack?.({ ok: false, error: '部屋が見つかりません' });
+      return;
+    }
+    const requester = findMemberBySocket(room, socket.id);
+    if (!requester || !isHost(room, requester.id)) {
+      ack?.({ ok: false, error: '権限がありません' });
+      return;
+    }
+    if (room.phase !== 'lobby') {
+      ack?.({ ok: false, error: '今はCPUを追加できません' });
+      return;
+    }
+    try {
+      addCPU(room);
+    } catch (err) {
+      ack?.({ ok: false, error: err.message });
+      return;
+    }
     ack?.({ ok: true });
     broadcastState(room);
   });
@@ -178,14 +229,7 @@ io.on('connection', (socket) => {
       ack?.({ ok: false, error: 'ルールは2〜3個選んでください' });
       return;
     }
-    room.selectedRuleIds = ids;
-    room.turnOrder = shuffleArray(otherMembers.map((m) => m.id));
-    room.currentTurnIndex = 0;
-    room.turnToken = 0;
-    room.history = [];
-    room.phase = 'predict';
-    room.answeringChildId = null;
-    room.lastResult = null;
+    startRound(room, ids);
     ack?.({ ok: true });
     broadcastState(room);
   });
@@ -295,6 +339,30 @@ io.on('connection', (socket) => {
     room.phase = 'predict';
     room.answeringChildId = null;
     ack?.({ ok: true, judgement });
+    broadcastState(room);
+  });
+
+  // 回答フェイズ中の子: あきらめる（正解ルールを公開してラウンドを終える）
+  socket.on('child:giveUp', ({ roomCode } = {}, ack) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      ack?.({ ok: false, error: '部屋が見つかりません' });
+      return;
+    }
+    const member = findMemberBySocket(room, socket.id);
+    if (!member || room.phase !== 'answer' || room.answeringChildId !== member.id) {
+      ack?.({ ok: false, error: '今はあなたの卒業判定の時間ではありません' });
+      return;
+    }
+    room.phase = 'result';
+    room.lastResult = {
+      judgement: 'DROPOUT',
+      correctRuleIds: room.selectedRuleIds,
+      clearedChildId: member.id,
+      clearedChildName: member.name,
+    };
+    room.answeringChildId = null;
+    ack?.({ ok: true, judgement: 'DROPOUT' });
     broadcastState(room);
   });
 

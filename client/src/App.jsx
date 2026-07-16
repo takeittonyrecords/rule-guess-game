@@ -100,6 +100,10 @@ export default function App() {
     [roomCode],
   );
 
+  const handleAddCPU = useCallback(async () => {
+    await emitAsync('host:addCPU', { roomCode });
+  }, [roomCode]);
+
   const handleResetToLobby = useCallback(async () => {
     await emitAsync('host:resetToLobby', { roomCode });
   }, [roomCode]);
@@ -147,6 +151,7 @@ export default function App() {
           gameState={gameState}
           amHost={amHost}
           onAssignParent={handleAssignParent}
+          onAddCPU={handleAddCPU}
         />
       );
     } else if (amParent) {
@@ -157,6 +162,7 @@ export default function App() {
           gameState={gameState}
           amHost={amHost}
           onAssignParent={handleAssignParent}
+          onAddCPU={handleAddCPU}
         />
       );
     }
@@ -197,7 +203,7 @@ export default function App() {
           gameState={gameState}
           roomCode={roomCode}
           onResult={(judgement) => {
-            if (judgement !== 'GRADUATE') {
+            if (judgement !== 'GRADUATE' && judgement !== 'DROPOUT') {
               setPendingAnswerFeedback(judgement);
             }
           }}
@@ -237,15 +243,18 @@ export default function App() {
       {amHost && (
         <div className="room-code-banner">
           <span>
+            <i className="ti ti-key" aria-hidden="true" />
             部屋コード: <strong>{gameState.code}</strong>
           </span>
           <button className="disband-button" onClick={handleDisbandRoom}>
+            <i className="ti ti-trash" aria-hidden="true" />
             部屋を解散する
           </button>
         </div>
       )}
       {!amHost && (
         <div className="child-name-banner">
+          <i className="ti ti-user" aria-hidden="true" />
           あなたの名前: <strong>{myName || '(名前未設定)'}</strong>
         </div>
       )}

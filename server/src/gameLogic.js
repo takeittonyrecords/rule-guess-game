@@ -30,6 +30,12 @@ export function judgeAnswer(correctIds, chosenIds) {
   return intersectionSize > 0 ? 'GOOD' : 'FAIL'; // 良 or 不可
 }
 
+// CPU（親役）が使う: 候補ルールIDの中から2〜3個をランダムに選ぶ。
+export function pickRandomRuleIds(allRuleIds) {
+  const count = Math.random() < 0.5 ? 2 : 3;
+  return shuffleArray(allRuleIds).slice(0, count);
+}
+
 export function currentChildId(room) {
   if (room.turnOrder.length === 0) return null;
   return room.turnOrder[room.currentTurnIndex];

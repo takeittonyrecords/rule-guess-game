@@ -11,7 +11,10 @@ export default function ParentMonitor({ gameState }) {
 
   return (
     <div className="screen">
-      <h2>試験問題（見守り中）</h2>
+      <h2>
+        <i className="ti ti-eye heading-icon" aria-hidden="true" />
+        試験問題（見守り中）
+      </h2>
       <p>
         現在の手番: <strong>{childName(gameState, gameState.currentChildId)}</strong>
       </p>

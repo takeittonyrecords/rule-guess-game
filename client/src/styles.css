@@ -13,11 +13,13 @@
   --accent: #7c6fee;
   --accent-dark: #5f4fe0;
   --accent-soft: #eae6ff;
+  --accent-pink: #e0518a;
   --shadow-soft: 0 8px 24px rgba(124, 111, 238, 0.12);
   --shadow-tiny: 0 2px 8px rgba(124, 111, 238, 0.1);
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
+  --font-display: 'Yusei Magic', 'Zen Kaku Gothic New', sans-serif;
 }
 
 html,
@@ -28,8 +30,12 @@ body {
 
 body {
   font-family: 'Zen Kaku Gothic New', -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
-  background: linear-gradient(160deg, var(--pastel-bg-1) 0%, var(--pastel-bg-2) 55%, var(--pastel-bg-3) 100%);
-  background-attachment: fixed;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cg fill='%237c6fee' fill-opacity='0.055'%3E%3Cpath d='M40 18L44 31L57 31L46 39L50 52L40 44L30 52L34 39L23 31L36 31Z'/%3E%3Ccircle cx='152' cy='58' r='4'/%3E%3Ccircle cx='182' cy='150' r='3'/%3E%3Cpath d='M112 128L115 138L125 138L117 144L120 154L112 148L104 154L107 144L99 138L109 138Z'/%3E%3Ccircle cx='28' cy='172' r='3'/%3E%3Ccircle cx='190' cy='30' r='2.5'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(160deg, var(--pastel-bg-1) 0%, var(--pastel-bg-2) 55%, var(--pastel-bg-3) 100%);
+  background-repeat: repeat, no-repeat;
+  background-size: 220px 220px, cover;
+  background-attachment: fixed, fixed;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -37,12 +43,25 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--ink);
 }
 
+.heading-icon {
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+button i.ti {
+  margin-right: 6px;
+  font-size: 1.05em;
+  vertical-align: -0.05em;
+}
+
 .screen {
+  position: relative;
   max-width: 720px;
   margin: 24px auto;
   padding: 28px;
@@ -50,6 +69,17 @@ h3 {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--card-border);
+  overflow: hidden;
+}
+
+.screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-pink) 100%);
 }
 
 .screen.center {
@@ -81,6 +111,57 @@ h3 {
   font-size: 14px;
   line-height: 1.8;
   text-align: left;
+}
+
+/* ===== v2: タイトルグラフィック ===== */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.title-graphic-wrap {
+  margin: 4px 0 8px;
+  line-height: 0;
+}
+
+.title-svg {
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+}
+
+.title-svg-text {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 700;
+  fill: url(#titleGrad);
+}
+
+.title-svg-sparkle {
+  font-size: 32px;
+  fill: var(--accent-pink);
+}
+
+.title-svg-sparkle-sm {
+  font-size: 18px;
+  fill: var(--accent);
+}
+
+.title-svg-underline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 10;
+  opacity: 0.6;
 }
 
 label {
@@ -143,6 +224,18 @@ button.link {
   text-decoration: underline;
   box-shadow: none;
   padding: 4px 6px;
+}
+
+.give-up-button {
+  color: var(--ink-soft);
+  display: block;
+  margin: 6px auto 0;
+}
+
+.cpu-invite {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--card-border);
 }
 
 .rule-list {
@@ -297,6 +390,11 @@ button.link {
 
 .child-name-banner strong {
   font-size: 16px;
+}
+
+.room-code-banner i.ti,
+.child-name-banner i.ti {
+  margin-right: 6px;
 }
 
 /* ===== v2: キーパッド ===== */

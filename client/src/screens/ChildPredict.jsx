@@ -32,7 +32,10 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
 
   return (
     <div className="screen">
-      <h2>試験問題（あなたの手番）</h2>
+      <h2>
+        <i className="ti ti-flask heading-icon" aria-hidden="true" />
+        試験問題（あなたの手番）
+      </h2>
 
       <h3>これまでの式と結果</h3>
       <table className="history-table">
@@ -64,6 +67,7 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
           <Keypad value={formula} onChange={setFormula} />
           {error && <p className="error-text">{error}</p>}
           <button disabled={busy || !formula} onClick={handleSubmit}>
+            <i className="ti ti-send" aria-hidden="true" />
             送信する
           </button>
         </div>
@@ -76,9 +80,11 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
           </p>
           <p>卒業試験に挑戦する？</p>
           <button disabled={busy} onClick={() => handleEndTurn('goToAnswer')}>
+            <i className="ti ti-certificate" aria-hidden="true" />
             卒業判定に挑戦する
           </button>
           <button disabled={busy} onClick={() => handleEndTurn('passTurn')}>
+            <i className="ti ti-arrow-right" aria-hidden="true" />
             次のプレイヤーにターンを渡す
           </button>
         </div>

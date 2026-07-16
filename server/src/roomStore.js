@@ -70,6 +70,22 @@ export function addMember(room, socketId, name) {
   return member;
 }
 
+// CPU（ソケットを持たない仮想メンバー）を1体だけ追加する。
+// 一人プレイ用: ホストがこのCPUを親に指名すると、ルールをランダムに自動選択して
+// すぐに試験問題フェイズへ進む（server/src/index.jsのhost:assignParent参照）。
+export function addCPU(room) {
+  if (room.members.length >= MAX_MEMBERS) {
+    throw new Error(`この部屋は満員です（最大${MAX_MEMBERS}人）`);
+  }
+  if (room.members.some((m) => m.isCPU)) {
+    throw new Error('CPUはすでに追加されています');
+  }
+  const id = generateMemberId();
+  const member = { id, socketId: null, name: 'CPU教授', isCPU: true };
+  room.members.push(member);
+  return member;
+}
+
 export function removeSocketFromRoom(room, socketId) {
   room.members = room.members.filter((m) => m.socketId !== socketId);
 }

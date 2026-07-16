@@ -27,6 +27,22 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
     onResult(res.judgement);
   }
 
+  async function handleGiveUp() {
+    const confirmed = window.confirm(
+      'あきらめると、このラウンドの正解ルールが公開されて終了します。よろしいですか？',
+    );
+    if (!confirmed) return;
+    setError('');
+    setBusy(true);
+    const res = await emitAsync('child:giveUp', { roomCode });
+    setBusy(false);
+    if (!res?.ok) {
+      setError(res?.error || '送信に失敗しました');
+      return;
+    }
+    onResult(res.judgement);
+  }
+
   return (
     <div className="screen answer-sheet">
       <div className="answer-sheet-header">
@@ -50,7 +66,12 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
       <p>選択中: {selected.length}個</p>
       {error && <p className="error-text">{error}</p>}
       <button disabled={busy} onClick={handleSubmit}>
+        <i className="ti ti-check" aria-hidden="true" />
         解答する
+      </button>
+      <button disabled={busy} className="link give-up-button" onClick={handleGiveUp}>
+        <i className="ti ti-flag" aria-hidden="true" />
+        あきらめる
       </button>
     </div>
   );
