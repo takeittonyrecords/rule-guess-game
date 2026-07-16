@@ -10,6 +10,9 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
   const [submitted, setSubmitted] = useState(false);
   const [lastResult, setLastResult] = useState('');
   const [busy, setBusy] = useState(false);
+  const [hintError, setHintError] = useState('');
+  const [hintTrace, setHintTrace] = useState(null);
+  const [hintBusy, setHintBusy] = useState(false);
 
   async function handleSubmit() {
     setError('');
@@ -28,6 +31,18 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
     setBusy(true);
     await emitAsync('child:endTurn', { roomCode, action });
     setBusy(false);
+  }
+
+  async function handleUseHint() {
+    setHintError('');
+    setHintBusy(true);
+    const res = await emitAsync('child:useHint', { roomCode });
+    setHintBusy(false);
+    if (!res?.ok) {
+      setHintError(res?.error || 'ヒントの取得に失敗しました');
+      return;
+    }
+    setHintTrace(res.trace || []);
   }
 
   return (
@@ -87,6 +102,36 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
             <i className="ti ti-arrow-right" aria-hidden="true" />
             次のプレイヤーにターンを渡す
           </button>
+
+          <div className="hint-box">
+            {hintTrace === null ? (
+              <button
+                disabled={hintBusy || gameState.hintUsed}
+                className="link"
+                onClick={handleUseHint}
+              >
+                <i className="ti ti-bulb" aria-hidden="true" />
+                {gameState.hintUsed ? 'ヒントは使用済みです（このラウンドは1回まで）' : 'ヒントを見る（このラウンド1回だけ）'}
+              </button>
+            ) : (
+              <>
+                <p className="hint-box-title">
+                  <i className="ti ti-bulb" aria-hidden="true" />
+                  ヒント：直前の式に適用されたルール
+                </p>
+                {hintTrace.length > 0 ? (
+                  <ul className="trace-list">
+                    {hintTrace.map((line, idx) => (
+                      <li key={idx}>{line}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="hint">ルールの影響はありませんでした</p>
+                )}
+              </>
+            )}
+            {hintError && <p className="error-text">{hintError}</p>}
+          </div>
         </div>
       )}
 

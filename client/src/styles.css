@@ -274,6 +274,40 @@ button.link {
   border-top: 1px dashed var(--card-border);
 }
 
+.cpu-difficulty-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.cpu-difficulty-label {
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.cpu-difficulty-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.hint-box {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--card-border);
+  text-align: left;
+}
+
+.hint-box-title {
+  font-weight: 700;
+  color: var(--accent-dark);
+  margin-bottom: 6px;
+}
+
 .rule-list {
   list-style: none;
   padding: 0;
@@ -599,6 +633,16 @@ button.link {
   line-height: 1.4;
 }
 
+.rule-card-flavor {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
 /* ===== v2: 解答用紙(答案)UI ===== */
 
 .answer-sheet {
@@ -738,16 +782,3 @@ button.link {
 }
 
 @keyframes catPopIn {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}

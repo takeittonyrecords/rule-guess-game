@@ -9,7 +9,14 @@ import { Server } from 'socket.io';
 import { ruleListForClient, RULES } from './rules.js';
 import { parseFormula, FormulaError } from './parser.js';
 import { evaluateFormula } from './ruleEngine.js';
-import { judgeAnswer, shuffleArray, currentChildId, advanceTurn, pickRandomRuleIds } from './gameLogic.js';
+import {
+  judgeAnswer,
+  shuffleArray,
+  currentChildId,
+  advanceTurn,
+  pickRandomRuleIds,
+  CPU_DIFFICULTIES,
+} from './gameLogic.js';
 import {
   createRoom,
   getRoom,
@@ -17,6 +24,7 @@ import {
   addMember,
   addCPU,
   removeCPU,
+  setCPUDifficulty,
   removeSocketFromRoom,
   findMemberBySocket,
   findMemberById,
@@ -57,9 +65,9 @@ setInterval(cleanupExpiredRooms, 10 * 60 * 1000);
 // 正解ルールが見える「特権ビューア」として扱う。
 function isPrivilegedViewer(room, viewerMemberId) {
   if (!viewerMemberId) return false;
-  // 「廃校」結果画面（子が全員あきらめて誰も卒業できなかった）では、
+  // 結果画面（卒業・廃校のどちらでもラウンドが終わった後）では、
   // 内訳や正解ルールを全員に公開する（もう推理する意味がないため）。
-  if (room.phase === 'result' && room.lastResult?.judgement === 'CLOSED') return true;
+  if (room.phase === 'result') return true;
   if (viewerMemberId === room.currentParentId) return true;
   return (room.droppedOutIds || []).includes(viewerMemberId);
 }
@@ -78,7 +86,12 @@ function buildStateFor(room, viewerMemberId) {
     code: room.code,
     hostId: room.hostId,
     phase: room.phase,
-    members: room.members.map((m) => ({ id: m.id, name: m.name, isCPU: !!m.isCPU })),
+    members: room.members.map((m) => ({
+      id: m.id,
+      name: m.name,
+      isCPU: !!m.isCPU,
+      ...(m.isCPU ? { difficulty: m.difficulty || 'intermediate' } : {}),
+    })),
     currentParentId: room.currentParentId,
     rulesPool: ruleListForClient(),
     turnOrder: room.turnOrder,
@@ -89,6 +102,7 @@ function buildStateFor(room, viewerMemberId) {
     ruleCountSelected: room.selectedRuleIds.length,
     lastResult: room.lastResult,
     droppedOutIds: room.droppedOutIds || [],
+    hintUsed: (room.hintsUsed || []).includes(viewerMemberId),
   };
   if (isPrivilegedViewer(room, viewerMemberId)) {
     base.selectedRuleIds = room.selectedRuleIds;
@@ -126,6 +140,7 @@ function resetToLobby(room) {
   room.answeringChildId = null;
   room.lastResult = null;
   room.droppedOutIds = [];
+  room.hintsUsed = [];
 }
 
 // 親が選んだ(またはCPUが自動選択した)ルールでラウンドを開始する。
@@ -143,6 +158,7 @@ function startRound(room, ruleIds) {
   room.answeringChildId = null;
   room.lastResult = null;
   room.droppedOutIds = [];
+  room.hintsUsed = [];
 }
 
 // turnOrderから指定メンバーを外す。「今まさに手番なのは誰か」をIDで捕まえておいてから
@@ -217,10 +233,12 @@ io.on('connection', (socket) => {
     room.currentParentId = target.id;
     if (target.isCPU) {
       // CPUが親の場合は自分で選択画面を開けないので、ここでランダムに
-      // 2〜3個のルールを自動選択して即座にラウンドを開始する。
+      // ルールを自動選択して即座にラウンドを開始する。個数のレンジは
+      // CPUの難易度設定(初級/中級/上級/ハードコア)による。
       const otherMembers = room.members.filter((m) => m.id !== target.id);
       if (otherMembers.length > 0) {
-        const ruleIds = pickRandomRuleIds(RULES.map((r) => r.id));
+        const tier = CPU_DIFFICULTIES[target.difficulty] || CPU_DIFFICULTIES.intermediate;
+        const ruleIds = pickRandomRuleIds(RULES.map((r) => r.id), tier.min, tier.max);
         startRound(room, ruleIds);
       }
     }
@@ -280,7 +298,37 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
-  // 親: ルール選択(2〜3個) -> 予測フェイズ開始
+  // ホスト: CPUの難易度を変更する
+  socket.on('host:setCPUDifficulty', ({ roomCode, difficulty } = {}, ack) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      ack?.({ ok: false, error: '部屋が見つかりません' });
+      return;
+    }
+    const requester = findMemberBySocket(room, socket.id);
+    if (!requester || !isHost(room, requester.id)) {
+      ack?.({ ok: false, error: '権限がありません' });
+      return;
+    }
+    if (room.phase !== 'lobby') {
+      ack?.({ ok: false, error: '今は難易度を変更できません' });
+      return;
+    }
+    if (!CPU_DIFFICULTIES[difficulty]) {
+      ack?.({ ok: false, error: '不明な難易度です' });
+      return;
+    }
+    try {
+      setCPUDifficulty(room, difficulty);
+    } catch (err) {
+      ack?.({ ok: false, error: err.message });
+      return;
+    }
+    ack?.({ ok: true });
+    broadcastState(room);
+  });
+
+  // 親: ルール選択(1〜5個) -> 予測フェイズ開始
   socket.on('parent:selectRules', ({ roomCode, ruleIds } = {}, ack) => {
     const room = getRoom(roomCode);
     if (!room) {
@@ -299,8 +347,8 @@ io.on('connection', (socket) => {
       return;
     }
     const ids = Array.from(new Set(ruleIds || []));
-    if (ids.length < 2 || ids.length > 3) {
-      ack?.({ ok: false, error: 'ルールは2〜3個選んでください' });
+    if (ids.length < 1 || ids.length > 5) {
+      ack?.({ ok: false, error: 'ルールは1〜5個選んでください' });
       return;
     }
     startRound(room, ids);
@@ -388,8 +436,8 @@ io.on('connection', (socket) => {
       return;
     }
     const ids = Array.from(new Set(ruleIds || []));
-    if (ids.length < 2) {
-      ack?.({ ok: false, error: 'ルールを2つ以上選んでください' });
+    if (ids.length < 1) {
+      ack?.({ ok: false, error: 'ルールを1つ以上選んでください' });
       return;
     }
     const judgement = judgeAnswer(room.selectedRuleIds, ids);
@@ -441,6 +489,42 @@ io.on('connection', (socket) => {
       closeRound(room);
     }
     ack?.({ ok: true });
+    broadcastState(room);
+  });
+
+  // v2で追加: 子はラウンド中に1回だけ「ヒント」を使える。内容は自分が直前に送信した
+  // 式に適用されたルールの内訳(trace)で、親の監視画面と同じ情報。他の子には見せない。
+  // ackで本人にだけ内訳を返し、room.history自体は変更しない（他メンバーへの公開範囲は
+  // 従来どおりhistoryForViewerに委ねる）。
+  socket.on('child:useHint', ({ roomCode } = {}, ack) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      ack?.({ ok: false, error: '部屋が見つかりません' });
+      return;
+    }
+    const member = findMemberBySocket(room, socket.id);
+    if (!member || room.phase !== 'predict') {
+      ack?.({ ok: false, error: '今はヒントを使えません' });
+      return;
+    }
+    room.hintsUsed = room.hintsUsed || [];
+    if (room.hintsUsed.includes(member.id)) {
+      ack?.({ ok: false, error: 'ヒントはこのラウンドですでに使いました' });
+      return;
+    }
+    const myEntries = room.history.filter((h) => h.childId === member.id);
+    const last = myEntries[myEntries.length - 1];
+    if (!last) {
+      ack?.({ ok: false, error: 'まだ式を入力していません' });
+      return;
+    }
+    room.hintsUsed.push(member.id);
+    ack?.({
+      ok: true,
+      formulaDisplay: last.formulaDisplay,
+      resultDisplay: last.resultDisplay,
+      trace: last.trace || [],
+    });
     broadcastState(room);
   });
 

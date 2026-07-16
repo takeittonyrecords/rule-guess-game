@@ -43,6 +43,7 @@ export function createRoom(hostSocketId, hostName) {
     lastResult: null, // { judgement, correctRuleIds, clearedChildId, clearedChildName }
     droppedOutIds: [], // v2で追加: このラウンドで「あきらめた」子のメンバーID一覧。
                         // 抜けた子は以後、親と同じ監視画面(内訳つき)が見られる。
+    hintsUsed: [], // v2で追加: このラウンドで「ヒント」を使ったメンバーID一覧（1ラウンド1回まで）。
   };
   rooms.set(code, room);
   return room;
@@ -83,9 +84,20 @@ export function addCPU(room) {
     throw new Error('CPUはすでに追加されています');
   }
   const id = generateMemberId();
-  const member = { id, socketId: null, name: 'CPU教授', isCPU: true };
+  // difficulty: v2で追加。ホストがロビーで変更できるCPUの難易度('beginner'|'intermediate'|
+  // 'advanced'|'hardcore')。デフォルトは中級。実際の個数レンジはgameLogic.jsのCPU_DIFFICULTIES参照。
+  const member = { id, socketId: null, name: 'CPU教授', isCPU: true, difficulty: 'intermediate' };
   room.members.push(member);
   return member;
+}
+
+// v2で追加: CPUの難易度を変更する（ロビー中のみホストが呼べる想定）。
+export function setCPUDifficulty(room, difficulty) {
+  const cpu = room.members.find((m) => m.isCPU);
+  if (!cpu) {
+    throw new Error('CPUは追加されていません');
+  }
+  cpu.difficulty = difficulty;
 }
 
 // 誤って追加したCPUを削除する。CPUが現在の親に指名されていた場合は指名も解除する。

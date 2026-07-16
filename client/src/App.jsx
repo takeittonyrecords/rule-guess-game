@@ -108,6 +108,13 @@ export default function App() {
     await emitAsync('host:removeCPU', { roomCode });
   }, [roomCode]);
 
+  const handleSetCPUDifficulty = useCallback(
+    async (difficulty) => {
+      await emitAsync('host:setCPUDifficulty', { roomCode, difficulty });
+    },
+    [roomCode],
+  );
+
   const handleResetToLobby = useCallback(async () => {
     await emitAsync('host:resetToLobby', { roomCode });
   }, [roomCode]);
@@ -161,6 +168,7 @@ export default function App() {
           onAssignParent={handleAssignParent}
           onAddCPU={handleAddCPU}
           onRemoveCPU={handleRemoveCPU}
+          onSetCPUDifficulty={handleSetCPUDifficulty}
         />
       );
     } else if (amParent) {
@@ -173,6 +181,7 @@ export default function App() {
           onAssignParent={handleAssignParent}
           onAddCPU={handleAddCPU}
           onRemoveCPU={handleRemoveCPU}
+          onSetCPUDifficulty={handleSetCPUDifficulty}
         />
       );
     }

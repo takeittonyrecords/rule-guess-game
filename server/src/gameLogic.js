@@ -30,11 +30,22 @@ export function judgeAnswer(correctIds, chosenIds) {
   return intersectionSize > 0 ? 'GOOD' : 'FAIL'; // 良 or 不可
 }
 
-// CPU（親役）が使う: 候補ルールIDの中から2〜3個をランダムに選ぶ。
-export function pickRandomRuleIds(allRuleIds) {
-  const count = Math.random() < 0.5 ? 2 : 3;
+// CPU（親役）が使う: 候補ルールIDの中からminCount〜maxCount個をランダムに選ぶ。
+// 難易度ごとの個数レンジはCPU_DIFFICULTIESを参照。
+export function pickRandomRuleIds(allRuleIds, minCount = 1, maxCount = 5) {
+  const count = minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
   return shuffleArray(allRuleIds).slice(0, count);
 }
+
+// v2で追加: CPU（一人プレイの仮想の親）の難易度設定。
+// ホストがロビー画面で選べる4段階。selectRules/submitAnswerの許容範囲(1〜5個)の中の
+// サブレンジとして、CPUが実際に選ぶルール個数を絞り込む。
+export const CPU_DIFFICULTIES = {
+  beginner: { label: '初級', min: 1, max: 2 },
+  intermediate: { label: '中級', min: 1, max: 3 },
+  advanced: { label: '上級', min: 2, max: 5 },
+  hardcore: { label: 'ハードコア', min: 4, max: 5 },
+};
 
 export function currentChildId(room) {
   if (room.turnOrder.length === 0) return null;

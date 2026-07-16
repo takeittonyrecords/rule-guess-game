@@ -18,8 +18,8 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
 
   async function handleStart() {
     setError('');
-    if (selected.length < 2 || selected.length > 3) {
-      setError('ルールは2〜3個選んでください');
+    if (selected.length < 1 || selected.length > 5) {
+      setError('ルールは1〜5個選んでください');
       return;
     }
     setSubmitting(true);
@@ -37,7 +37,7 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
         試験問題作成中（部屋コード: {gameState.code}）
       </h2>
       <p>あなたが今回の親です。他のメンバー: {otherMembers.map((m) => m.name).join('、') || '(まだいません)'}</p>
-      <p>このリストから2〜3個のルールを選んでください。選んだルールは他のメンバーには見えません。</p>
+      <p>このリストから1〜5個のルールを選んでください。選んだルールは他のメンバーには見えません。</p>
 
       <div className="rule-card-grid">
         {gameState.rulesPool.map((r) => (

@@ -13,8 +13,8 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
 
   async function handleSubmit() {
     setError('');
-    if (selected.length < 2) {
-      setError('ルールを2つ以上選んでください');
+    if (selected.length < 1) {
+      setError('ルールを1つ以上選んでください');
       return;
     }
     setBusy(true);
@@ -31,7 +31,7 @@ export default function ChildAnswer({ gameState, roomCode, onResult }) {
     <div className="screen answer-sheet">
       <div className="answer-sheet-header">
         <span className="answer-sheet-title">解答用紙</span>
-        <span className="answer-sheet-hint">選択式・2つ以上</span>
+        <span className="answer-sheet-hint">選択式・1つ以上</span>
       </div>
 
       <div className="rule-card-grid">

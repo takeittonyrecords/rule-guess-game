@@ -1,6 +1,21 @@
-export default function LobbyScreen({ gameState, amHost, onAssignParent, onAddCPU, onRemoveCPU }) {
+const CPU_DIFFICULTY_OPTIONS = [
+  { value: 'beginner', label: '初級（1〜2個）' },
+  { value: 'intermediate', label: '中級（1〜3個）' },
+  { value: 'advanced', label: '上級（2〜5個）' },
+  { value: 'hardcore', label: 'ハードコア（4〜5個）' },
+];
+
+export default function LobbyScreen({
+  gameState,
+  amHost,
+  onAssignParent,
+  onAddCPU,
+  onRemoveCPU,
+  onSetCPUDifficulty,
+}) {
   const parentName = gameState.members.find((m) => m.id === gameState.currentParentId)?.name;
-  const hasCPU = gameState.members.some((m) => m.isCPU);
+  const cpu = gameState.members.find((m) => m.isCPU);
+  const hasCPU = !!cpu;
 
   return (
     <div className="screen">
@@ -57,6 +72,24 @@ export default function LobbyScreen({ gameState, amHost, onAssignParent, onAddCP
           ) : (
             <div className="cpu-invite">
               <p className="hint">CPUが追加されています。間違えて追加した場合はここから削除できます。</p>
+              <div className="cpu-difficulty-picker">
+                <span className="cpu-difficulty-label">
+                  <i className="ti ti-adjustments" aria-hidden="true" />
+                  CPUの難易度:
+                </span>
+                {CPU_DIFFICULTY_OPTIONS.map((opt) => (
+                  <label key={opt.value} className="cpu-difficulty-option">
+                    <input
+                      type="radio"
+                      name="cpuDifficulty"
+                      value={opt.value}
+                      checked={(cpu.difficulty || 'intermediate') === opt.value}
+                      onChange={() => onSetCPUDifficulty(opt.value)}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
               <button type="button" className="link" onClick={onRemoveCPU}>
                 <i className="ti ti-trash" aria-hidden="true" />
                 CPUを削除する
