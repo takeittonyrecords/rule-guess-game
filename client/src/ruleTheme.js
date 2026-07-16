@@ -21,6 +21,8 @@ export const JUDGEMENT_LABEL = {
   GOOD: '良',
   PASS: '可',
   FAIL: '不可',
+  // v2で追加: 子が全員あきらめて誰も卒業できなかったときの特別な判定。
+  CLOSED: '廃校',
 };
 
 export const JUDGEMENT_DESCRIPTION = {
@@ -29,6 +31,7 @@ export const JUDGEMENT_DESCRIPTION = {
   GOOD: '正しいルールを含むが、ルールの数が間違っているぞ。まだまだだ！',
   PASS: 'ルールの数はあっているが、正しいルールが一つもない。やり直し！',
   FAIL: '何もわかっとらん。人生を見つめなおせ。',
+  CLOSED: 'もう何もかもおしまいだ……',
 };
 
 // 計算結果の表示用の特殊マーカー。ruleEngine.js の displayType==='cat' のとき

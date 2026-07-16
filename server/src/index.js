@@ -57,6 +57,9 @@ setInterval(cleanupExpiredRooms, 10 * 60 * 1000);
 // 正解ルールが見える「特権ビューア」として扱う。
 function isPrivilegedViewer(room, viewerMemberId) {
   if (!viewerMemberId) return false;
+  // 「廃校」結果画面（子が全員あきらめて誰も卒業できなかった）では、
+  // 内訳や正解ルールを全員に公開する（もう推理する意味がないため）。
+  if (room.phase === 'result' && room.lastResult?.judgement === 'CLOSED') return true;
   if (viewerMemberId === room.currentParentId) return true;
   return (room.droppedOutIds || []).includes(viewerMemberId);
 }
@@ -97,6 +100,18 @@ function broadcastState(room) {
   for (const member of room.members) {
     io.to(member.socketId).emit('state:update', buildStateFor(room, member.id));
   }
+}
+
+// v2で追加: 子が全員あきらめたときに呼ぶ。即座にロビーへ戻すのではなく、
+// 「廃校」の結果画面を全員に表示する。ロビーに戻る操作はホストが
+// host:resetToLobby を明示的に呼ぶまで待つ。
+function closeRound(room) {
+  room.phase = 'result';
+  room.lastResult = {
+    judgement: 'CLOSED',
+    correctRuleIds: room.selectedRuleIds,
+  };
+  room.answeringChildId = null;
 }
 
 // ゲームの状態を初期化してロビーに戻す(親の指名からやり直し)
@@ -423,7 +438,7 @@ io.on('connection', (socket) => {
     }
     const hasRemainingChildren = removeChildFromTurnOrder(room, member.id);
     if (!hasRemainingChildren) {
-      resetToLobby(room);
+      closeRound(room);
     }
     ack?.({ ok: true });
     broadcastState(room);

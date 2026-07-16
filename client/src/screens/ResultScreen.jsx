@@ -1,10 +1,78 @@
 import JudgementStamp from './JudgementStamp.jsx';
+import ResultDisplay from './ResultDisplay.jsx';
 
 export default function ResultScreen({ gameState, amHost, roomCode, onResetToLobby }) {
   const { lastResult, rulesPool } = gameState;
+  const isClosed = lastResult?.judgement === 'CLOSED';
   const correctLabels = (lastResult?.correctRuleIds || [])
     .map((id) => rulesPool.find((r) => r.id === id)?.label)
     .filter(Boolean);
+
+  if (isClosed) {
+    return (
+      <div className="screen">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h2>
+            <i className="ti ti-alert-triangle heading-icon" aria-hidden="true" />
+            廃校
+          </h2>
+          <JudgementStamp judgement="CLOSED" />
+        </div>
+
+        <h3>最初に選ばれていたルール</h3>
+        <ul className="selected-rule-list">
+          {correctLabels.map((label, idx) => (
+            <li key={idx}>{label}</li>
+          ))}
+        </ul>
+
+        <h3>このラウンドの式と結果（内訳つき）</h3>
+        <table className="history-table">
+          <thead>
+            <tr>
+              <th>子</th>
+              <th>式</th>
+              <th>結果</th>
+              <th>内訳</th>
+            </tr>
+          </thead>
+          <tbody>
+            {gameState.history.map((h, idx) => (
+              <tr key={idx}>
+                <td>{h.childName}</td>
+                <td>{h.formulaDisplay}</td>
+                <td>
+                  <ResultDisplay display={h.resultDisplay} />
+                </td>
+                <td className="trace-cell">
+                  {h.trace && h.trace.length > 0 ? (
+                    <ul className="trace-list">
+                      {h.trace.map((line, tIdx) => (
+                        <li key={tIdx}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="hint">ルールの影響なし</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {gameState.history.length === 0 && <p className="hint">まだ誰も式を入力していませんでした</p>}
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          {amHost && (
+            <button onClick={onResetToLobby}>
+              <i className="ti ti-refresh" aria-hidden="true" />
+              ロビーに戻る
+            </button>
+          )}
+          {!amHost && <p className="hint">ホストの操作を待っています</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="screen center">

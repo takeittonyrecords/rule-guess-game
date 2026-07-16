@@ -30,6 +30,7 @@ export default function RuleCard({ rule, checked, onToggle, questionNumber, roun
           </span>
         )}
         <span className="rule-card-label">{rule.label}</span>
+        {rule.flavor && <span className="rule-card-flavor">{rule.flavor}</span>}
       </span>
     </label>
   );

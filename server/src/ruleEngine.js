@@ -6,10 +6,8 @@
 // 1. 演算子の優先順位は導入しない。式は単純に左から右へ順番に計算する
 //    （× ÷ を先に計算する、という一般的な優先順位は使わない）。
 //    v1にあった「右から左に処理する」ルールはv2で削除されたため、常に左→右固定。
-// 2. ルール6「引き算は足し算として扱う」は符号反転せず、単純に演算子を＋に
-//    置き換えるだけの処理（例：5−3 → 5+3=8）。以前の「符号反転して加算」という
-//    実装だと数学的に元の引き算と全く同じ値になり、選んでも結果が変わらない
-//    （推理不可能な）ルールになってしまうため、この仕様検討時に修正した。
+// 2. ルール6「引き算は掛け算として扱う」は演算子を×に置き換えるだけの処理
+//    （例：8−3 → 8×3=24）。
 // 3. ルール10「演算子は同じ数でもう一度計算する」は、ルール6〜9で演算子の意味が
 //    確定した後に、その場で同じ右辺の値を使ってもう一度同じ演算を行う
 //    （例：3+4 → 3+4+4=11、10÷2 → 10÷2÷2=2.5）。
@@ -17,14 +15,16 @@
 //    タイになる場合は、該当する数字すべてに効果が及ぶ（v1の「最大」判定を踏襲）。
 // 5. ルール適用によって（入力時点では0除算でなかったのに）割る数が0になってしまった
 //    場合は、「計算不能（÷0）」という特殊な結果として扱う（手番は通常通り消費する）。
-// 6. 段階Cの桁操作系ルール（鏡反転）は、結果の整数部分の絶対値に対して適用し、
+// 6. 段階Cの桁操作系ルール（鏡反転など）は、結果の整数部分の絶対値に対して適用し、
 //    符号は別途保持する。小数が出た場合は整数部分のみ桁操作の対象とし、
 //    小数部分はそのまま保持する。
 // 7. 段階D（表示演出）は段階A〜Cの計算が全て終わった最終結果に対して適用する。
 //    複数の段階Dルールが同時に選ばれていて、条件が重なった場合の優先順位は
-//    ネコ(15) > クリリン(17, 59/593) > 名言(16, 42) > ナベアツ(14) の順。
+//    クリリン(17, 59/593) > ネコ(15) > 班長(23, 11/111/1111) > 名言(16, 42) >
+//    ナベアツ(14) > 3歳児(20, 100超え) の順。
 //    （例：222はナベアツの条件も満たすがネコが優先。593はナベアツの条件も満たすが
-//    クリリンが優先。42はナベアツの条件も満たすが名言が優先。）
+//    クリリンが優先。42はナベアツの条件も満たすが名言が優先。111はナベアツの
+//    条件も満たすが班長が優先。111・1111は3歳児の条件(100超え)も満たすが班長が優先。）
 // 8. ナベアツ風の読み上げでは、マイナス符号は読みに含めない（簡略化）。
 //    小数が出た場合は「テン」のあとに小数部分の桁を1つずつ読む
 //    （例：3.33 → サンテンサンサン）。整数部分は4桁ごとに区切り、万・億・兆・京の
@@ -70,9 +70,19 @@ function applyStageA(term, context, ruleIds, trace, termIndex) {
           value = -Math.abs(value);
         }
         break;
+      case 18: // 偶数は1を足す（判定は元の数字基準）
+        if (isEven) {
+          value = value + 1;
+        }
+        break;
       case 3: // 奇数は2倍にしてから計算する（判定は元の数字基準）
         if (original % 2 !== 0) {
           value = value * 2;
+        }
+        break;
+      case 19: // 奇数は1を引く（判定は元の数字基準）
+        if (original % 2 !== 0) {
+          value = value - 1;
         }
         break;
       case 4: // 式の中の最小の数字だけ2倍にする（最小値の判定は元の数字基準）
@@ -104,7 +114,7 @@ function resolveOperator(op, ruleIds, trace, opIndex) {
   switch (op) {
     case 'sub':
       if (has(6)) {
-        effective = 'add';
+        effective = 'mul';
         firedRuleId = 6;
       }
       break;
@@ -174,6 +184,12 @@ function applyStageC(result, ruleIds, trace) {
       }
       case 13: // 2倍にする
         intPart = intPart * 2;
+        break;
+      case 21: // 3倍にする
+        intPart = intPart * 3;
+        break;
+      case 22: // 半分にする（切り捨て）
+        intPart = Math.trunc(intPart / 2);
         break;
       default:
         break;
@@ -326,15 +342,44 @@ function isAllTwos(value) {
   return s.length >= 2 && [...s].every((c) => c === '2');
 }
 
+function isAllOnes(value) {
+  if (!Number.isInteger(value)) return false;
+  const s = String(Math.trunc(Math.abs(value)));
+  return s.length >= 2 && [...s].every((c) => c === '1');
+}
+
+// ルール20「計算結果が100を超えると3歳児になる」用のランダムな台詞。
+const TODDLER_LINES = [
+  'ぼく３さいだからむずかしいことはわかりません',
+  'もうなにもかんがえたくありません。３さいなので',
+  'ばぶー！　ばぶー！　ばぶー！　ばぶー……',
+  'こんなけいさんとかしたくないんです、３さいですから',
+];
+
+// ルール23「班長」用のランダムな台詞。
+const HANCHOU_LINES = [
+  'ノーカン！ノーカン！ノーカン！',
+  'いろいろいろいろ…！　しようと思ってたのに……！　くうう～～っ……！',
+  'へただなあ、カイジ君。へたっぴさ',
+];
+
+function pickRandomLine(lines) {
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
 function applyStageD(finalValue, ruleIds) {
   const has = (id) => ruleIds.includes(id);
+
+  if (has(17) && (finalValue === 59 || finalValue === 593)) {
+    return { display: 'クリリンのことかーっ！！！', displayType: 'kuririn' };
+  }
 
   if (has(15) && isAllTwos(finalValue)) {
     return { display: '__CAT__', displayType: 'cat' };
   }
 
-  if (has(17) && (finalValue === 59 || finalValue === 593)) {
-    return { display: 'クリリンのことかーっ！！！', displayType: 'kuririn' };
+  if (has(23) && isAllOnes(finalValue)) {
+    return { display: `「${pickRandomLine(HANCHOU_LINES)}」`, displayType: 'hanchou' };
   }
 
   if (has(16) && finalValue === 42) {
@@ -351,6 +396,10 @@ function applyStageD(finalValue, ruleIds) {
       const half = toHalfWidthKatakana(elongated);
       return { display: `${half}!`, displayType: 'nabeatsu' };
     }
+  }
+
+  if (has(20) && Number.isFinite(finalValue) && Math.abs(finalValue) > 100) {
+    return { display: `「${pickRandomLine(TODDLER_LINES)}」`, displayType: 'toddler' };
   }
 
   return { display: formatNumber(finalValue), displayType: 'number' };
