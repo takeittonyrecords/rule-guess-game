@@ -16,6 +16,7 @@ import {
   deleteRoom,
   addMember,
   addCPU,
+  removeCPU,
   removeSocketFromRoom,
   findMemberBySocket,
   findMemberById,
@@ -52,10 +53,18 @@ const io = new Server(server, {
 
 setInterval(cleanupExpiredRooms, 10 * 60 * 1000);
 
-// 履歴を閲覧者ごとに整形する。親（currentParentId）にはルール適用の内訳(trace)を
-// そのまま見せるが、子にはtraceを取り除いた履歴を渡す（ネタバレ防止）。
+// v2で追加: 「親」と「あきらめて監視モードになった子」は、どちらも内訳(trace)や
+// 正解ルールが見える「特権ビューア」として扱う。
+function isPrivilegedViewer(room, viewerMemberId) {
+  if (!viewerMemberId) return false;
+  if (viewerMemberId === room.currentParentId) return true;
+  return (room.droppedOutIds || []).includes(viewerMemberId);
+}
+
+// 履歴を閲覧者ごとに整形する。特権ビューアにはルール適用の内訳(trace)を
+// そのまま見せるが、それ以外の子にはtraceを取り除いた履歴を渡す（ネタバレ防止）。
 function historyForViewer(room, viewerMemberId) {
-  if (viewerMemberId && viewerMemberId === room.currentParentId) {
+  if (isPrivilegedViewer(room, viewerMemberId)) {
     return room.history;
   }
   return room.history.map(({ trace, ...rest }) => rest);
@@ -76,8 +85,9 @@ function buildStateFor(room, viewerMemberId) {
     answeringChildId: room.answeringChildId,
     ruleCountSelected: room.selectedRuleIds.length,
     lastResult: room.lastResult,
+    droppedOutIds: room.droppedOutIds || [],
   };
-  if (viewerMemberId && viewerMemberId === room.currentParentId) {
+  if (isPrivilegedViewer(room, viewerMemberId)) {
     base.selectedRuleIds = room.selectedRuleIds;
   }
   return base;
@@ -100,13 +110,15 @@ function resetToLobby(room) {
   room.history = [];
   room.answeringChildId = null;
   room.lastResult = null;
+  room.droppedOutIds = [];
 }
 
 // 親が選んだ(またはCPUが自動選択した)ルールでラウンドを開始する。
 // parent:selectRules（人間の親）とhost:assignParent（CPUが親の場合の自動開始）の
 // 両方から呼ばれる共通処理。
 function startRound(room, ruleIds) {
-  const otherMembers = room.members.filter((m) => m.id !== room.currentParentId);
+  // CPUは親役専用（自分では手番を進められないため）なので、子の手番(turnOrder)には含めない。
+  const otherMembers = room.members.filter((m) => m.id !== room.currentParentId && !m.isCPU);
   room.selectedRuleIds = ruleIds;
   room.turnOrder = shuffleArray(otherMembers.map((m) => m.id));
   room.currentTurnIndex = 0;
@@ -115,6 +127,26 @@ function startRound(room, ruleIds) {
   room.phase = 'predict';
   room.answeringChildId = null;
   room.lastResult = null;
+  room.droppedOutIds = [];
+}
+
+// turnOrderから指定メンバーを外す。「今まさに手番なのは誰か」をIDで捕まえておいてから
+// 除外し、除外後の配列内でのそのIDのインデックスを引き直すことで、途中のメンバーが
+// 抜けてもcurrentTurnIndexがずれないようにする。
+// 戻り値: 除外後も子が1人以上残っていればtrue、誰もいなくなったらfalse。
+function removeChildFromTurnOrder(room, memberId) {
+  const currentId = room.turnOrder[room.currentTurnIndex];
+  const idx = room.turnOrder.indexOf(memberId);
+  if (idx !== -1) {
+    room.turnOrder.splice(idx, 1);
+  }
+  if (room.turnOrder.length === 0) {
+    room.currentTurnIndex = 0;
+    return false;
+  }
+  const newIdx = room.turnOrder.indexOf(currentId);
+  room.currentTurnIndex = newIdx !== -1 ? newIdx : 0;
+  return true;
 }
 
 io.on('connection', (socket) => {
@@ -207,6 +239,32 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
+  // ホスト: 誤って追加したCPUを削除する
+  socket.on('host:removeCPU', ({ roomCode } = {}, ack) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      ack?.({ ok: false, error: '部屋が見つかりません' });
+      return;
+    }
+    const requester = findMemberBySocket(room, socket.id);
+    if (!requester || !isHost(room, requester.id)) {
+      ack?.({ ok: false, error: '権限がありません' });
+      return;
+    }
+    if (room.phase !== 'lobby') {
+      ack?.({ ok: false, error: '今はCPUを削除できません' });
+      return;
+    }
+    try {
+      removeCPU(room);
+    } catch (err) {
+      ack?.({ ok: false, error: err.message });
+      return;
+    }
+    ack?.({ ok: true });
+    broadcastState(room);
+  });
+
   // 親: ルール選択(2〜3個) -> 予測フェイズ開始
   socket.on('parent:selectRules', ({ roomCode, ruleIds } = {}, ack) => {
     const room = getRoom(roomCode);
@@ -219,7 +277,8 @@ io.on('connection', (socket) => {
       ack?.({ ok: false, error: '権限がありません' });
       return;
     }
-    const otherMembers = room.members.filter((m) => m.id !== room.currentParentId);
+    // CPUは子になれない（自分で手番を進められない）ため、人間のメンバーだけを数える。
+    const otherMembers = room.members.filter((m) => m.id !== room.currentParentId && !m.isCPU);
     if (otherMembers.length === 0) {
       ack?.({ ok: false, error: '他のメンバーが参加していません' });
       return;
@@ -342,7 +401,11 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
-  // 回答フェイズ中の子: あきらめる（正解ルールを公開してラウンドを終える）
+  // v2で再設計: 「あきらめる」は本人だけがこのラウンドから抜ける操作。
+  // 回答結果画面(AnswerFeedbackScreen)から呼ばれる想定で、この時点で
+  // サーバー側のフェイズはすでにpredictに戻っている（submitAnswerの時点で戻すため）。
+  // 抜けた本人は以後、親と同じ監視画面（内訳つき）が見られるようになる。
+  // 子が全員あきらめた場合は、そのラウンドを終了してロビー（次のラウンド作成画面）に戻す。
   socket.on('child:giveUp', ({ roomCode } = {}, ack) => {
     const room = getRoom(roomCode);
     if (!room) {
@@ -350,19 +413,19 @@ io.on('connection', (socket) => {
       return;
     }
     const member = findMemberBySocket(room, socket.id);
-    if (!member || room.phase !== 'answer' || room.answeringChildId !== member.id) {
-      ack?.({ ok: false, error: '今はあなたの卒業判定の時間ではありません' });
+    if (!member || room.phase !== 'predict') {
+      ack?.({ ok: false, error: '今はあきらめられません' });
       return;
     }
-    room.phase = 'result';
-    room.lastResult = {
-      judgement: 'DROPOUT',
-      correctRuleIds: room.selectedRuleIds,
-      clearedChildId: member.id,
-      clearedChildName: member.name,
-    };
-    room.answeringChildId = null;
-    ack?.({ ok: true, judgement: 'DROPOUT' });
+    room.droppedOutIds = room.droppedOutIds || [];
+    if (!room.droppedOutIds.includes(member.id)) {
+      room.droppedOutIds.push(member.id);
+    }
+    const hasRemainingChildren = removeChildFromTurnOrder(room, member.id);
+    if (!hasRemainingChildren) {
+      resetToLobby(room);
+    }
+    ack?.({ ok: true });
     broadcastState(room);
   });
 
@@ -421,14 +484,9 @@ io.on('connection', (socket) => {
       resetToLobby(room);
     } else if (room.phase !== 'lobby') {
       // 進行中の子が抜けた場合は手番表から外す
-      const idx = room.turnOrder.indexOf(member.id);
-      if (idx !== -1) {
-        room.turnOrder.splice(idx, 1);
-        if (room.turnOrder.length === 0) {
-          resetToLobby(room);
-        } else if (room.currentTurnIndex >= room.turnOrder.length) {
-          room.currentTurnIndex = 0;
-        }
+      const hasRemainingChildren = removeChildFromTurnOrder(room, member.id);
+      if (!hasRemainingChildren) {
+        resetToLobby(room);
       }
     }
     broadcastState(room);

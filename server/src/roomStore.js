@@ -41,6 +41,8 @@ export function createRoom(hostSocketId, hostName) {
     history: [], // { childId, childName, formulaDisplay, resultDisplay }
     answeringChildId: null,
     lastResult: null, // { judgement, correctRuleIds, clearedChildId, clearedChildName }
+    droppedOutIds: [], // v2で追加: このラウンドで「あきらめた」子のメンバーID一覧。
+                        // 抜けた子は以後、親と同じ監視画面(内訳つき)が見られる。
   };
   rooms.set(code, room);
   return room;
@@ -84,6 +86,18 @@ export function addCPU(room) {
   const member = { id, socketId: null, name: 'CPU教授', isCPU: true };
   room.members.push(member);
   return member;
+}
+
+// 誤って追加したCPUを削除する。CPUが現在の親に指名されていた場合は指名も解除する。
+export function removeCPU(room) {
+  const cpu = room.members.find((m) => m.isCPU);
+  if (!cpu) {
+    throw new Error('CPUは追加されていません');
+  }
+  room.members = room.members.filter((m) => !m.isCPU);
+  if (room.currentParentId === cpu.id) {
+    room.currentParentId = null;
+  }
 }
 
 export function removeSocketFromRoom(room, socketId) {

@@ -34,15 +34,19 @@ export default function TopScreen({ onCreateRoom, onJoinRoom }) {
 
       {!mode && (
         <>
-          <p className="flavor-text">
-            「単位が足りない！」
-            <br />
-            このままでは留年と教授に土下座するが、嫌らしい教授は「わかっているね…？」とほくそ笑んでくる。
-            <br />
-            数字も式も、見た目通りとは限らない。
-            <br />
-            仕掛けられたルールを見破って、なんとしても卒業するんだ！
-          </p>
+          <div className="flavor-text">
+            <i className="ti ti-quote flavor-quote-icon" aria-hidden="true" />
+            <p className="flavor-hook">「単位が足りない！」</p>
+            <p className="flavor-body">
+              このままでは留年と教授に土下座するが、嫌らしい教授は「わかっているね…？」とほくそ笑んでくる。
+              <br />
+              数字も式も、見た目通りとは限らない。
+            </p>
+            <p className="flavor-cta">
+              <i className="ti ti-sparkles" aria-hidden="true" />
+              仕掛けられたルールを見破って、なんとしても卒業するんだ！
+            </p>
+          </div>
           <div className="stack">
             <button onClick={() => setMode('create')}>
               <i className="ti ti-door-enter" aria-hidden="true" />

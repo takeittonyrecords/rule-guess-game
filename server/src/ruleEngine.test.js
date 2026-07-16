@@ -54,7 +54,9 @@ checkValue('plain-left-to-right', '2+3*4', [], 20); // (2+3)=5, 5*4=20
 
 // 段階C
 checkValue('rule11-mirror', '99+24', [11], 321); // 123 -> 321
-checkValue('rule12-abs', '3-10', [12], 7); // -7 -> 7
+checkValue('rule12-repdigit-2digit', '17+0', [12], 11); // 17 -> 11（先頭の1で全桁を揃える）
+checkValue('rule12-repdigit-3digit', '99+99', [12], 111); // 198 -> 111（先頭の1で全桁を揃える）
+checkValue('rule12-repdigit-negative', '3-99', [12], -99); // -96 -> -99（符号は保持したまま桁だけ揃える）
 checkValue('rule13-double', '8+0', [13], 16); // 8 -> 16
 
 // 段階D
@@ -70,6 +72,17 @@ checkDisplay(
   [10, 14],
   'ｷｭｳｼﾞｭｳｺﾞｵｸｷｭｳﾋｬｸｷｭｳｼﾞｭｳﾏﾝﾖﾝﾋｬｸｷｭｳｼﾞｭｳｷｭｳｰ!',
 ); // ルール10で99*99*99*99=9,509,900,499（億の位まで正しく読めることの確認）
+
+checkDisplay('rule16-answer42', '40+2', [16], '__ANSWER42__'); // 42のとき専用マーカー
+checkDisplay('rule16x14-answer42-wins', '40+2', [14, 16], '__ANSWER42__'); // 42は3の倍数でもあるが名言ルールが優先
+checkDisplay('rule17-kuririn-59', '50+9', [17], 'クリリンのことかーっ！！！');
+checkDisplay('rule17-kuririn-593', '99*5+98', [17], 'クリリンのことかーっ！！！'); // 99*5+98=593
+checkDisplay(
+  'rule17x14-kuririn-wins',
+  '99*5+98',
+  [14, 17],
+  'クリリンのことかーっ！！！',
+); // 593は「3」を含むためナベアツの条件も満たすが、クリリンが優先
 
 // 0除算（ルール適用によって発生するケース）
 checkDisplay('div-by-zero-via-rule9', '5+0', [9], '計算不能（÷0）'); // 5÷0

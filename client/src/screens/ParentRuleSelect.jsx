@@ -7,7 +7,10 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const otherMembers = gameState.members.filter((m) => m.id !== gameState.currentParentId);
+  // CPUは子になれないため、人間のメンバーだけを「他のメンバー」として数える。
+  const otherMembers = gameState.members.filter(
+    (m) => m.id !== gameState.currentParentId && !m.isCPU,
+  );
 
   function toggle(id) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));

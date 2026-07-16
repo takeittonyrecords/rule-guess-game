@@ -21,8 +21,10 @@
 //    符号は別途保持する。小数が出た場合は整数部分のみ桁操作の対象とし、
 //    小数部分はそのまま保持する。
 // 7. 段階D（表示演出）は段階A〜Cの計算が全て終わった最終結果に対して適用する。
-//    ナベアツ風ルールとネコルールが両方選ばれていて、両方の条件を満たす場合は
-//    ネコを優先する（例：計算結果が222の場合）。
+//    複数の段階Dルールが同時に選ばれていて、条件が重なった場合の優先順位は
+//    ネコ(15) > クリリン(17, 59/593) > 名言(16, 42) > ナベアツ(14) の順。
+//    （例：222はナベアツの条件も満たすがネコが優先。593はナベアツの条件も満たすが
+//    クリリンが優先。42はナベアツの条件も満たすが名言が優先。）
 // 8. ナベアツ風の読み上げでは、マイナス符号は読みに含めない（簡略化）。
 //    小数が出た場合は「テン」のあとに小数部分の桁を1つずつ読む
 //    （例：3.33 → サンテンサンサン）。整数部分は4桁ごとに区切り、万・億・兆・京の
@@ -165,9 +167,11 @@ function applyStageC(result, ruleIds, trace) {
       case 11: // 鏡のように反転させる
         intPart = Number(String(intPart).split('').reverse().join(''));
         break;
-      case 12: // 絶対値にする
-        currentSign = 1;
+      case 12: { // ぞろ目にする（結果の全部の桁を先頭の数字で揃える）
+        const digits = String(intPart);
+        intPart = Number(digits[0].repeat(digits.length));
         break;
+      }
       case 13: // 2倍にする
         intPart = intPart * 2;
         break;
@@ -327,6 +331,14 @@ function applyStageD(finalValue, ruleIds) {
 
   if (has(15) && isAllTwos(finalValue)) {
     return { display: '__CAT__', displayType: 'cat' };
+  }
+
+  if (has(17) && (finalValue === 59 || finalValue === 593)) {
+    return { display: 'クリリンのことかーっ！！！', displayType: 'kuririn' };
+  }
+
+  if (has(16) && finalValue === 42) {
+    return { display: '__ANSWER42__', displayType: 'quote42' };
   }
 
   if (has(14)) {

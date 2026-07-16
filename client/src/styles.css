@@ -101,16 +101,52 @@ button i.ti {
 }
 
 .flavor-text {
-  max-width: 420px;
-  margin: 4px 0 8px;
-  padding: 14px 18px;
-  background: var(--pastel-bg-1);
+  position: relative;
+  max-width: 440px;
+  margin: 6px 0 10px;
+  padding: 22px 24px 20px;
+  background: linear-gradient(155deg, var(--pastel-bg-1) 0%, var(--pastel-bg-3) 100%);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-tiny);
   color: var(--ink-soft);
   font-size: 14px;
   line-height: 1.8;
   text-align: left;
+  overflow: hidden;
+}
+
+.flavor-quote-icon {
+  position: absolute;
+  top: 4px;
+  right: 14px;
+  font-size: 48px;
+  color: var(--accent);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.flavor-hook {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-pink);
+  letter-spacing: 0.02em;
+}
+
+.flavor-body {
+  margin: 0 0 12px;
+}
+
+.flavor-cta {
+  margin: 0;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+
+.flavor-cta i.ti {
+  margin-right: 6px;
 }
 
 /* ===== v2: タイトルグラフィック ===== */
@@ -692,6 +728,13 @@ button.link {
   font-size: 1.1em;
   font-weight: 700;
   color: var(--accent, #8b5cf6);
+}
+
+.answer42-text {
+  display: inline-block;
+  font-style: italic;
+  color: var(--accent-dark);
+  line-height: 1.6;
 }
 
 @keyframes catPopIn {

@@ -21,7 +21,6 @@ export const JUDGEMENT_LABEL = {
   GOOD: '良',
   PASS: '可',
   FAIL: '不可',
-  DROPOUT: '中退',
 };
 
 export const JUDGEMENT_DESCRIPTION = {
@@ -30,9 +29,15 @@ export const JUDGEMENT_DESCRIPTION = {
   GOOD: '正しいルールを含むが、ルールの数が間違っているぞ。まだまだだ！',
   PASS: 'ルールの数はあっているが、正しいルールが一つもない。やり直し！',
   FAIL: '何もわかっとらん。人生を見つめなおせ。',
-  DROPOUT: '君には失望した。',
 };
 
 // 計算結果の表示用の特殊マーカー。ruleEngine.js の displayType==='cat' のとき
 // display フィールドにこの値が入る。
 export const CAT_MARKER = '__CAT__';
+
+// v2で追加: ルール16「計算結果が42のとき」の特殊マーカーと表示テキスト。
+// ruleEngine.js側は文字列そのものではなく、このマーカーだけを返す
+// （実際の名言テキストの原本はこちら側だけに置いておく）。
+export const ANSWER_42_MARKER = '__ANSWER42__';
+export const ANSWER_42_TEXT =
+  '「まちがいなくそれが答えです。率直なところ、みなさんのほうで究極の疑問が何であるかわかっていなかったところに問題があるのです」';

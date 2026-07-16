@@ -44,7 +44,7 @@ export const RULES = [
     stage: 'B',
     priority: 1,
     label: '引き算は足し算として扱う',
-    example: { before: '5−3', after: '5+3=8' },
+    example: { before: '−', after: '＋' },
   },
   {
     id: 7,
@@ -85,8 +85,8 @@ export const RULES = [
     id: 12,
     stage: 'C',
     priority: 2,
-    label: '計算結果を絶対値にする',
-    example: { before: '-7', after: '7' },
+    label: 'ぞろ目にする（結果の全部の桁を先頭の数字で揃える）',
+    example: { before: '172', after: '111' },
   },
   {
     id: 13,
@@ -108,6 +108,23 @@ export const RULES = [
     priority: 2,
     label: '22、222、2222のとき猫が現れる',
     example: { before: '222', after: '🐱' },
+  },
+  {
+    id: 16,
+    stage: 'D',
+    priority: 3,
+    label: '計算結果が42のとき、「人生、宇宙、すべての答え」が返ってくる',
+    example: {
+      before: '42',
+      after: '「まちがいなくそれが答えです。率直なところ、みなさんのほうで究極の疑問が何であるかわかっていなかったところに問題があるのです」',
+    },
+  },
+  {
+    id: 17,
+    stage: 'D',
+    priority: 4,
+    label: '計算結果が59か593のときに、フリーザへの怒りをためたサイヤ戦士が現れる',
+    example: { before: '59', after: 'クリリンのことかーっ！！！' },
   },
 ];
 

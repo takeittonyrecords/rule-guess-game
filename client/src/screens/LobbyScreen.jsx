@@ -1,4 +1,4 @@
-export default function LobbyScreen({ gameState, amHost, onAssignParent, onAddCPU }) {
+export default function LobbyScreen({ gameState, amHost, onAssignParent, onAddCPU, onRemoveCPU }) {
   const parentName = gameState.members.find((m) => m.id === gameState.currentParentId)?.name;
   const hasCPU = gameState.members.some((m) => m.isCPU);
 
@@ -44,7 +44,7 @@ export default function LobbyScreen({ gameState, amHost, onAssignParent, onAddCP
           {gameState.members.length < 2 && (
             <p className="hint">他のメンバーの参加を待っています（2人以上必要です）</p>
           )}
-          {!hasCPU && (
+          {!hasCPU ? (
             <div className="cpu-invite">
               <p className="hint">
                 一人で遊びたいときは、CPUを親役として追加できます。CPUはルールをランダムに選ぶだけで、監視画面などは使いません。
@@ -52,6 +52,14 @@ export default function LobbyScreen({ gameState, amHost, onAssignParent, onAddCP
               <button type="button" className="link" onClick={onAddCPU}>
                 <i className="ti ti-robot" aria-hidden="true" />
                 CPUを追加する
+              </button>
+            </div>
+          ) : (
+            <div className="cpu-invite">
+              <p className="hint">CPUが追加されています。間違えて追加した場合はここから削除できます。</p>
+              <button type="button" className="link" onClick={onRemoveCPU}>
+                <i className="ti ti-trash" aria-hidden="true" />
+                CPUを削除する
               </button>
             </div>
           )}

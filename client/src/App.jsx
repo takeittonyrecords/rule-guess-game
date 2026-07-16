@@ -104,6 +104,10 @@ export default function App() {
     await emitAsync('host:addCPU', { roomCode });
   }, [roomCode]);
 
+  const handleRemoveCPU = useCallback(async () => {
+    await emitAsync('host:removeCPU', { roomCode });
+  }, [roomCode]);
+
   const handleResetToLobby = useCallback(async () => {
     await emitAsync('host:resetToLobby', { roomCode });
   }, [roomCode]);
@@ -132,6 +136,8 @@ export default function App() {
   const { phase } = gameState;
   const amHost = memberId === gameState.hostId;
   const amParent = gameState.currentParentId !== null && memberId === gameState.currentParentId;
+  // v2で追加: あきらめて監視モードになった子は、親と同じ監視画面(ParentMonitor)を見る。
+  const amDroppedOut = (gameState.droppedOutIds || []).includes(memberId);
   const myName = gameState.members.find((m) => m.id === memberId)?.name;
 
   let content;
@@ -140,7 +146,9 @@ export default function App() {
     content = (
       <AnswerFeedbackScreen
         judgement={pendingAnswerFeedback}
+        roomCode={roomCode}
         onContinue={() => setPendingAnswerFeedback(null)}
+        onGiveUp={() => setPendingAnswerFeedback(null)}
       />
     );
   } else if (phase === 'lobby') {
@@ -152,6 +160,7 @@ export default function App() {
           amHost={amHost}
           onAssignParent={handleAssignParent}
           onAddCPU={handleAddCPU}
+          onRemoveCPU={handleRemoveCPU}
         />
       );
     } else if (amParent) {
@@ -163,11 +172,12 @@ export default function App() {
           amHost={amHost}
           onAssignParent={handleAssignParent}
           onAddCPU={handleAddCPU}
+          onRemoveCPU={handleRemoveCPU}
         />
       );
     }
   } else if (phase === 'predict') {
-    if (amParent) {
+    if (amParent || amDroppedOut) {
       content = <ParentMonitor gameState={gameState} roomCode={roomCode} />;
     } else {
       const isMyTurn = gameState.currentChildId === memberId;
@@ -197,13 +207,15 @@ export default function App() {
       }
     }
   } else if (phase === 'answer') {
-    if (!amParent && gameState.answeringChildId === memberId) {
+    if (amParent || amDroppedOut) {
+      content = <ParentMonitor gameState={gameState} roomCode={roomCode} />;
+    } else if (gameState.answeringChildId === memberId) {
       content = (
         <ChildAnswer
           gameState={gameState}
           roomCode={roomCode}
           onResult={(judgement) => {
-            if (judgement !== 'GRADUATE' && judgement !== 'DROPOUT') {
+            if (judgement !== 'GRADUATE') {
               setPendingAnswerFeedback(judgement);
             }
           }}
@@ -214,7 +226,7 @@ export default function App() {
         <WaitingScreen
           gameState={gameState}
           memberId={memberId}
-          role={amParent ? 'parent' : 'child'}
+          role="child"
           ruleMemo={ruleMemo}
           onCycleMemo={handleCycleMemo}
           answering
