@@ -5,8 +5,7 @@ export default function AnswerFeedbackScreen({ judgement, onContinue }) {
     <div className="screen center">
       <h2>判定結果</h2>
       <JudgementStamp judgement={judgement} />
-      <p>卒業ではなかったので、予測フェイズに戻れます（ペナルティはありません）。</p>
-      <button onClick={onContinue}>予測フェイズに戻る</button>
+      <button onClick={onContinue}>試験問題に戻る</button>
     </div>
   );
 }

@@ -8,7 +8,7 @@ function memberName(gameState, id) {
 export default function WaitingScreen({ gameState, answering, role, ruleMemo, onCycleMemo }) {
   return (
     <div className="screen">
-      <h2>{answering ? '回答フェイズ中' : '予測フェイズ'}</h2>
+      <h2>{answering ? '卒業判定中' : '試験問題'}</h2>
       {answering ? (
         <p>
           <strong>{memberName(gameState, gameState.answeringChildId)}</strong> さんが回答中です...

@@ -29,9 +29,9 @@ export default function ParentRuleSelect({ gameState, roomCode }) {
 
   return (
     <div className="screen">
-      <h2>ルール選択（部屋コード: {gameState.code}）</h2>
+      <h2>試験問題作成中（部屋コード: {gameState.code}）</h2>
       <p>あなたが今回の親です。他のメンバー: {otherMembers.map((m) => m.name).join('、') || '(まだいません)'}</p>
-      <p>プールから2〜3個のルールを選んでください。選んだルールは他のメンバーには見えません。</p>
+      <p>このリストから2〜3個のルールを選んでください。選んだルールは他のメンバーには見えません。</p>
 
       <div className="rule-card-grid">
         {gameState.rulesPool.map((r) => (

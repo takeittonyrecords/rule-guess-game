@@ -70,6 +70,19 @@ h3 {
   max-width: 340px;
 }
 
+.flavor-text {
+  max-width: 420px;
+  margin: 4px 0 8px;
+  padding: 14px 18px;
+  background: var(--pastel-bg-1);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.8;
+  text-align: left;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -151,6 +164,28 @@ button.link {
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--card-border);
+}
+
+.trace-cell {
+  max-width: 260px;
+}
+
+.trace-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trace-list li {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--pastel-bg-1);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  line-height: 1.4;
 }
 
 .history-table th,

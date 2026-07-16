@@ -32,7 +32,7 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
 
   return (
     <div className="screen">
-      <h2>予測フェイズ（あなたの手番）</h2>
+      <h2>試験問題（あなたの手番）</h2>
 
       <h3>これまでの式と結果</h3>
       <table className="history-table">
@@ -58,7 +58,9 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
 
       {!submitted && (
         <div className="stack">
-          <p className="hint">計算式（0〜99の整数、2〜3項）をキーパッドで入力してください</p>
+          <p className="hint">
+            数字と記号をキーパッドで入力してください（0〜99の数字を最大3つまで、割り切れないときは小数第2位まで表示されます）
+          </p>
           <Keypad value={formula} onChange={setFormula} />
           {error && <p className="error-text">{error}</p>}
           <button disabled={busy || !formula} onClick={handleSubmit}>
@@ -72,12 +74,12 @@ export default function ChildPredict({ gameState, roomCode, ruleMemo, onCycleMem
           <p>
             結果: <strong><ResultDisplay display={lastResult} /></strong>
           </p>
-          <p>次にどうしますか？</p>
+          <p>卒業試験に挑戦する？</p>
           <button disabled={busy} onClick={() => handleEndTurn('goToAnswer')}>
-            回答フェイズに進む
+            卒業判定に挑戦する
           </button>
           <button disabled={busy} onClick={() => handleEndTurn('passTurn')}>
-            次の子にターンを渡す
+            次のプレイヤーにターンを渡す
           </button>
         </div>
       )}

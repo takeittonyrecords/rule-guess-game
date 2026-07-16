@@ -7,13 +7,24 @@ export default function TopScreen({ onCreateRoom, onJoinRoom }) {
 
   return (
     <div className="screen center">
-      <h1>ルール推理計算ゲーム</h1>
+      <h1>まじかる単位認定</h1>
 
       {!mode && (
-        <div className="stack">
-          <button onClick={() => setMode('create')}>部屋を作る（ホスト）</button>
-          <button onClick={() => setMode('join')}>部屋に入る（参加者）</button>
-        </div>
+        <>
+          <p className="flavor-text">
+            「単位が足りない！」
+            <br />
+            このままでは留年と教授に土下座するが、嫌らしい教授は「わかっているね…？」とほくそ笑んでくる。
+            <br />
+            数字も式も、見た目通りとは限らない。
+            <br />
+            仕掛けられたルールを見破って、なんとしても卒業するんだ！
+          </p>
+          <div className="stack">
+            <button onClick={() => setMode('create')}>部屋を作る（ホスト）</button>
+            <button onClick={() => setMode('join')}>部屋に入る（参加者）</button>
+          </div>
+        </>
       )}
 
       {mode === 'create' && (

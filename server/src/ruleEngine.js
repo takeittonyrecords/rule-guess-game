@@ -25,12 +25,21 @@
 //    ネコを優先する（例：計算結果が222の場合）。
 // 8. ナベアツ風の読み上げでは、マイナス符号は読みに含めない（簡略化）。
 //    小数が出た場合は「テン」のあとに小数部分の桁を1つずつ読む
-//    （例：3.33 → サンテンサンサン）。数値の範囲は0〜9999まで正確な読みに対応し、
-//    それ以外は桁ごとの読みにフォールバックする。
+//    （例：3.33 → サンテンサンサン）。整数部分は4桁ごとに区切り、万・億・兆・京の
+//    単位を付けて読み上げる（例：970299 → キュウジュウナナマンニヒャクキュウジュウキュウ）。
+//    ルール10（演算子を2回適用）と掛け算の組み合わせでは数十億規模まで到達しうるため、
+//    この一般化が必要になった。想定を超える桁数（京を超える）の場合のみ、
+//    桁ごとの読みにフォールバックする。
+// 9. v2で追加: evaluateFormula は親専用の「内訳（trace）」を返す。どのルールが
+//    どの数値・演算子をどう変えたかを日本語の短い文で記録した配列で、実際に
+//    値が変化した場合のみ記録する（何も変わらなかったルールは記録しない）。
+//    子には見せず、親の監視画面でのみ表示する想定（サーバー側でフィルタする）。
 
 import { RULES, getRuleById } from './rules.js';
 
 const DIV_BY_ZERO = Symbol('DIV_BY_ZERO');
+
+const OP_SYMBOL = { add: '+', sub: '−', mul: '×', div: '÷' };
 
 function selectedRules(ruleIds, stage) {
   return ruleIds
@@ -40,13 +49,14 @@ function selectedRules(ruleIds, stage) {
 }
 
 // ---- 段階A: 数値の前処理 ----
-function applyStageA(term, context, ruleIds) {
+function applyStageA(term, context, ruleIds, trace, termIndex) {
   const rulesA = selectedRules(ruleIds, 'A');
   let value = term;
   const original = term;
   const isEven = original % 2 === 0;
 
   for (const rule of rulesA) {
+    const before = value;
     switch (rule.id) {
       case 1: // 1は0として扱う
         if (original === 1) {
@@ -76,25 +86,51 @@ function applyStageA(term, context, ruleIds) {
       default:
         break;
     }
+    if (value !== before && trace) {
+      trace.push(`項${termIndex + 1}(${original}): ${before}→${value}（${rule.label}）`);
+    }
   }
   return value;
 }
 
 // ---- 段階B: 演算子の意味変更 ----
 // 各演算子記号は「元の記号」を基準に一度だけ意味が決まる。連鎖はしない。
-function resolveOperator(op, ruleIds) {
+function resolveOperator(op, ruleIds, trace, opIndex) {
   const has = (id) => ruleIds.includes(id);
+  let effective = op;
+  let firedRuleId = null;
   switch (op) {
     case 'sub':
-      return has(6) ? 'add' : 'sub';
+      if (has(6)) {
+        effective = 'add';
+        firedRuleId = 6;
+      }
+      break;
     case 'mul':
-      return has(7) ? 'add' : 'mul';
+      if (has(7)) {
+        effective = 'add';
+        firedRuleId = 7;
+      }
+      break;
     case 'div':
-      return has(8) ? 'sub' : 'div';
+      if (has(8)) {
+        effective = 'sub';
+        firedRuleId = 8;
+      }
+      break;
     case 'add':
     default:
-      return has(9) ? 'div' : 'add';
+      if (has(9)) {
+        effective = 'div';
+        firedRuleId = 9;
+      }
+      break;
   }
+  if (firedRuleId && trace) {
+    const rule = getRuleById(firedRuleId);
+    trace.push(`演算子${opIndex + 1}: ${OP_SYMBOL[op]}→${OP_SYMBOL[effective]}（${rule.label}）`);
+  }
+  return effective;
 }
 
 function combine(left, effectiveOp, right) {
@@ -114,7 +150,7 @@ function combine(left, effectiveOp, right) {
 }
 
 // ---- 段階C: 結果の後処理 ----
-function applyStageC(result, ruleIds) {
+function applyStageC(result, ruleIds, trace) {
   const rulesC = selectedRules(ruleIds, 'C');
   if (typeof result !== 'number' || Number.isNaN(result)) return result;
 
@@ -124,6 +160,7 @@ function applyStageC(result, ruleIds) {
   let currentSign = sign;
 
   for (const rule of rulesC) {
+    const beforeValue = currentSign * (intPart + fracPart);
     switch (rule.id) {
       case 11: // 鏡のように反転させる
         intPart = Number(String(intPart).split('').reverse().join(''));
@@ -136,6 +173,10 @@ function applyStageC(result, ruleIds) {
         break;
       default:
         break;
+    }
+    const afterValue = currentSign * (intPart + fracPart);
+    if (afterValue !== beforeValue && trace) {
+      trace.push(`段階C: ${formatNumber(beforeValue)}→${formatNumber(afterValue)}（${rule.label}）`);
     }
   }
 
@@ -172,20 +213,48 @@ function thousandsReading(th) {
   return ONES[th] + 'セン';
 }
 
-function numberToKatakanaInt(n) {
-  if (n === 0) return 'ゼロ';
-  if (n < 0 || n >= 10000) {
-    // 想定範囲外は桁ごとの読みにフォールバックする
-    return String(Math.trunc(Math.abs(n)))
-      .split('')
-      .map((d) => ONES[Number(d)] || 'ゼロ')
-      .join('');
-  }
+// 0〜9999を正確に読む（千・百・十・一の組み立て）
+function readUnder10000(n) {
   const th = Math.floor(n / 1000);
   const rem = n % 1000;
   const h = Math.floor(rem / 100);
   const rem2 = rem % 100;
   return thousandsReading(th) + hundredsReading(h) + tensReading(rem2);
+}
+
+// 4桁ごとの単位（万・億・兆・京）。この配列の範囲を超える桁数の場合のみ
+// 桁ごとの読みにフォールバックする（このゲームで実際に到達しうる値は
+// 兆未満のため、京まで対応しておけば十分な安全マージンがある）。
+const BIG_UNITS = ['', 'マン', 'オク', 'チョウ', 'ケイ'];
+
+function numberToKatakanaInt(n) {
+  if (n === 0) return 'ゼロ';
+  const abs = Math.trunc(Math.abs(n));
+  if (abs < 10000) return readUnder10000(abs);
+
+  // 4桁ずつに区切る（下の桁から順に取り出す）
+  const groups = [];
+  let remaining = abs;
+  while (remaining > 0) {
+    groups.push(remaining % 10000);
+    remaining = Math.floor(remaining / 10000);
+  }
+
+  if (groups.length - 1 >= BIG_UNITS.length) {
+    // 想定を超える桁数(京を超える)場合は、桁ごとの読みにフォールバックする
+    return String(abs)
+      .split('')
+      .map((d) => ONES[Number(d)] || 'ゼロ')
+      .join('');
+  }
+
+  let result = '';
+  for (let i = groups.length - 1; i >= 0; i -= 1) {
+    const groupValue = groups[i];
+    if (groupValue === 0) continue;
+    result += readUnder10000(groupValue) + BIG_UNITS[i];
+  }
+  return result;
 }
 
 // 小数第2位までの四捨五入表示（既存の formatNumber と同じ丸め方針）
@@ -277,19 +346,24 @@ function applyStageD(finalValue, ruleIds) {
 
 // formula: parser.parseFormula() の戻り値 { terms, ops }
 // ruleIds: 親が選択中のルールID配列
+// 戻り値の trace は親専用の内訳（実際にどのルールが何を変えたかの日本語の短文配列）。
 export function evaluateFormula(formula, ruleIds) {
   const { terms, ops } = formula;
   const minTerm = Math.min(...terms);
   const maxTerm = Math.max(...terms);
+  const trace = [];
 
-  const transformed = terms.map((term) => {
+  const transformed = terms.map((term, idx) => {
     const isMinInFormula = term === minTerm;
     const isMaxInFormula = term === maxTerm;
-    return applyStageA(term, { isMinInFormula, isMaxInFormula }, ruleIds);
+    return applyStageA(term, { isMinInFormula, isMaxInFormula }, ruleIds, trace, idx);
   });
 
-  const effectiveOps = ops.map((op) => resolveOperator(op, ruleIds));
+  const effectiveOps = ops.map((op, idx) => resolveOperator(op, ruleIds, trace, idx));
   const applyTwice = ruleIds.includes(10);
+  if (applyTwice) {
+    trace.push('ルール10「演算子は同じ数でもう一度計算する」が有効: 各演算子を2回ずつ適用');
+  }
 
   let result = transformed[0];
   for (let i = 0; i < effectiveOps.length; i += 1) {
@@ -303,10 +377,16 @@ export function evaluateFormula(formula, ruleIds) {
   }
 
   if (result === DIV_BY_ZERO) {
-    return { ok: false, error: 'DIV_BY_ZERO', display: '計算不能（÷0）', displayType: 'number' };
+    return {
+      ok: false,
+      error: 'DIV_BY_ZERO',
+      display: '計算不能（÷0）',
+      displayType: 'number',
+      trace,
+    };
   }
 
-  const finalValue = applyStageC(result, ruleIds);
+  const finalValue = applyStageC(result, ruleIds, trace);
   const { display, displayType } = applyStageD(finalValue, ruleIds);
 
   return {
@@ -314,6 +394,7 @@ export function evaluateFormula(formula, ruleIds) {
     value: finalValue,
     display,
     displayType,
+    trace,
   };
 }
 

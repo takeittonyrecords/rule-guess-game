@@ -51,6 +51,15 @@ const io = new Server(server, {
 
 setInterval(cleanupExpiredRooms, 10 * 60 * 1000);
 
+// 履歴を閲覧者ごとに整形する。親（currentParentId）にはルール適用の内訳(trace)を
+// そのまま見せるが、子にはtraceを取り除いた履歴を渡す（ネタバレ防止）。
+function historyForViewer(room, viewerMemberId) {
+  if (viewerMemberId && viewerMemberId === room.currentParentId) {
+    return room.history;
+  }
+  return room.history.map(({ trace, ...rest }) => rest);
+}
+
 function buildStateFor(room, viewerMemberId) {
   const base = {
     code: room.code,
@@ -62,7 +71,7 @@ function buildStateFor(room, viewerMemberId) {
     turnOrder: room.turnOrder,
     currentChildId: currentChildId(room),
     turnToken: room.turnToken || 0,
-    history: room.history,
+    history: historyForViewer(room, viewerMemberId),
     answeringChildId: room.answeringChildId,
     ruleCountSelected: room.selectedRuleIds.length,
     lastResult: room.lastResult,
@@ -194,7 +203,7 @@ io.on('connection', (socket) => {
       return;
     }
     if (room.phase !== 'predict') {
-      ack?.({ ok: false, error: '今は予測フェイズではありません' });
+      ack?.({ ok: false, error: '今は試験問題の時間ではありません' });
       return;
     }
     if (currentChildId(room) !== member.id) {
@@ -217,6 +226,7 @@ io.on('connection', (socket) => {
       childName: member.name,
       formulaDisplay: parsed.display,
       resultDisplay: result.display,
+      trace: result.trace || [],
     });
     ack?.({ ok: true, resultDisplay: result.display });
     broadcastState(room);
@@ -256,7 +266,7 @@ io.on('connection', (socket) => {
     }
     const member = findMemberBySocket(room, socket.id);
     if (!member || room.phase !== 'answer' || room.answeringChildId !== member.id) {
-      ack?.({ ok: false, error: '今はあなたの回答フェイズではありません' });
+      ack?.({ ok: false, error: '今はあなたの卒業判定の時間ではありません' });
       return;
     }
     const ids = Array.from(new Set(ruleIds || []));
